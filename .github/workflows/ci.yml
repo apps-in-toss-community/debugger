@@ -40,4 +40,75 @@ jobs:
 
       - run: pnpm build
 
+      # Install-graph invariant: react/react-dom are devDeps of
+      # @ait-co/debugger only; the MCP daemon bundles must never import them
+      # (see packages/debugger/scripts/check-mcp-react-free.sh).
+      - run: pnpm check:mcp-react-free
+
+      # Build-artifact presence guard: dist/test-runner/runtime.js (and
+      # sibling page-side modules) must exist after build so bundleTestFile
+      # can resolve them at runtime (devtools#676/#697/#740/#769).
+      - run: pnpm check:test-runner-dist
+
+      # Build-time absence invariant (devtools#647): the in-app debug surface
+      # (Chii injection + eruda console, now @ait-co/debug-console) must DCE
+      # to 0 bytes in a release consumer build and never leak into the MCP
+      # daemon bundles. Package boundary is the 1st line of defence post-split
+      # (check:graph); this bundle grep is the 2nd.
+      - run: pnpm check:debug-surface-absent
+
+      # The dashboard/attach HTML is precompiled from
+      # packages/debugger/scripts/dashboard/*.tsx to
+      # packages/debugger/src/mcp/dashboard.generated.ts at build time. This
+      # guard fails if a JSX template was edited without regenerating the
+      # committed string module.
+      - run: pnpm check:dashboard-html-fresh
+
       - run: pnpm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Cache Playwright browsers keyed on the resolved @playwright/test
+      # version so version bumps invalidate the cache automatically.
+      - id: playwright-version
+        run: |
+          version=$(node -e 'const j=JSON.parse(require("child_process").execSync("pnpm list @playwright/test --depth=0 --json").toString());console.log(j[0].devDependencies["@playwright/test"].version)')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      # Only the relay/attach half of devtools' e2e suite lives here (see
+      # e2e/launcher-cdp-relay.test.ts's header comment) — neither test file
+      # drives a Playwright page against a served app, so there is no build
+      # step or webServer needed before `playwright test`.
+      - run: pnpm test:e2e
+
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+          if-no-files-found: ignore

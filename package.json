@@ -10,7 +10,12 @@
     "dev": "pnpm -r --parallel dev",
     "typecheck": "pnpm -r typecheck",
     "check:graph": "node scripts/check-package-graph.mjs",
-    "test": "pnpm -r test",
+    "check:mcp-react-free": "pnpm --filter @ait-co/debugger check:mcp-react-free",
+    "check:test-runner-dist": "pnpm --filter @ait-co/debugger check:test-runner-dist",
+    "check:debug-surface-absent": "pnpm --filter @ait-co/debugger check:debug-surface-absent",
+    "check:dashboard-html-fresh": "pnpm --filter @ait-co/debugger check:dashboard-html-fresh",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -21,7 +26,9 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.1",
     "@changesets/cli": "^2.31.0",
-    "typescript": "^6.0.2"
+    "@playwright/test": "^1.61.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   },
   "packageManager": "pnpm@10.33.0",
   "license": "BSD-3-Clause"
