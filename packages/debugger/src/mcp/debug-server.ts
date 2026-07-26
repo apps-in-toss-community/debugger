@@ -42,11 +42,18 @@
  * Node-only.
  */
 
+// The host allowlist is shared with the device-side gate. Before the split this
+// was `import … from '../in-app/gate.js'` — the daemon reaching into the
+// browser tree. That reverse edge would now be a hard `@ait-co/debugger` →
+// `@ait-co/debug-console` dependency, which is exactly what the split forbids:
+// it would put `eruda` in the daemon's install graph while the bundle grep
+// still passed. The predicate lives in the shared protocol package instead and
+// is inlined into both bundles at build time.
+import type { ProtocolVersionCheck } from '@ait-co/internal-protocol/attach-handshake';
+import { isDebugAllowedHost } from '@ait-co/internal-protocol/debug-host';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { isDebugAllowedHost } from '../in-app/gate.js';
-import { startMaxAgeWatchdog, startParentWatcher } from '../shared/parent-watcher.js';
 // Test-runner core (#646): run_tests reuses the same orchestration the
 // `devtools-test` CLI uses. These imports are react-free (node:* + esbuild),
 // so they do not break the MCP-daemon react-free invariant.
@@ -67,6 +74,8 @@ import {
   RELAY_SANDBOX_STALE_PAGE_MS,
   renderAndMaybeWait as renderAndMaybeWaitCore,
 } from './attach-orchestrator.js';
+import { startMaxAgeWatchdog, startParentWatcher } from './parent-watcher.js';
+import { createProtocolVersionMonitor } from './protocol-version.js';
 
 // Back-compat re-exports (issue #684 PR1): these symbols moved to
 // `attach-orchestrator.ts` but were previously exported from here. Re-export so
@@ -98,6 +107,7 @@ import {
   mcpError,
   pageCrashError,
   pageMissingError,
+  protocolVersionMismatchError,
   relayDisconnectError,
   sdkAbsentError,
   tierRejectionError,
@@ -135,16 +145,16 @@ import {
   listNetworkRequests,
   listPages,
   measureSafeArea,
+  readDevtoolsVersion,
   type TunnelStatus,
   takeScreenshot,
   takeSnapshot,
 } from './tools.js';
 import { assertRelayAuthConfigured, buildRelayVerifyAuth, generateTotp } from './totp.js';
 
-export { startMaxAgeWatchdog, startParentWatcher } from '../shared/parent-watcher.js';
+export { startMaxAgeWatchdog, startParentWatcher } from './parent-watcher.js';
 
 import {
-  generateAttachToken,
   makeTunnelStatus,
   printAttachBanner,
   type QuickTunnel,
@@ -324,6 +334,19 @@ export interface DebugServerDeps {
    * used (backwards-compatible with existing tests that don't inject one).
    */
   diagnosticsCollector?: DiagnosticsCollector;
+  /**
+   * Returns the device↔host protocol version skew observed on the attach
+   * handshake, or `null` when the two halves agree (or no device has reported
+   * yet).
+   *
+   * Boot sites wire this to a {@link createProtocolVersionMonitor} that
+   * `startChiiRelay`'s `onAttachHandshake` feeds. Omitted in tests that do not
+   * exercise the handshake — `start_attach` then behaves exactly as before.
+   *
+   * SECRET-HANDLING: the returned value carries two version strings and nothing
+   * else — no relay URL, tunnel host, or TOTP value.
+   */
+  getProtocolVersionSkew?: () => ProtocolVersionCheck | null;
   /**
    * Hex-encoded TOTP secret for `start_attach` auto-splice.
    *
@@ -661,6 +684,17 @@ export function createDebugServer(deps: DebugServerDeps): Server {
           attachConn,
         );
         if (!attachResult.isError) {
+          // The device reported its build version on the handshake path while
+          // attaching. If it disagrees with ours, say so NOW: the attach
+          // "succeeded" and every downstream symptom of a skew is silent
+          // (empty indicator, `undefined` snapshot fields, an unrecognised
+          // close frame), so this is the only point where the cause is still
+          // legible. SECRET-HANDLING: the message carries two version strings
+          // and nothing else.
+          const skew = deps.getProtocolVersionSkew?.() ?? null;
+          if (skew !== null) {
+            return protocolVersionMismatchError(skew.device, skew.host);
+          }
           // Debugger attached — show the on-phone "Debugger Connected" indicator.
           await injectDebugIndicator(attachConn);
         }
@@ -1590,6 +1624,15 @@ export interface BootRelayFamilyOptions {
    */
   onAuthReject?: (event: import('./chii-relay.js').RelayAuthRejectEvent) => void;
   /**
+   * Secret-free observability callback for the device's attach version report —
+   * forwarded to {@link startChiiRelay}'s `onAttachHandshake`. Receives only the
+   * reported version string; never the URL, the TOTP code its path prefix
+   * carries, or the relay host. Boot sites wire it to a
+   * {@link createProtocolVersionMonitor} so `start_attach` can name a
+   * device↔host version skew.
+   */
+  onAttachHandshake?: (event: import('./chii-relay.js').AttachHandshakeEvent) => void;
+  /**
    * Called with the cloudflared child PID once the tunnel is up.
    *
    * FIX 3 (issue #571): callers wire this to
@@ -1649,6 +1692,7 @@ export async function bootRelayFamily(options: BootRelayFamilyOptions = {}): Pro
     port: relayPort,
     verifyAuth: options.verifyAuth,
     onAuthReject: options.onAuthReject,
+    onAttachHandshake: options.onAttachHandshake,
   });
   // relay.port is the actual OS-assigned port (may differ from relayPort when 0).
   logInfo('server.start', { port: relay.port, totpEnabled });
@@ -1656,10 +1700,6 @@ export async function bootRelayFamily(options: BootRelayFamilyOptions = {}): Pro
   let tunnel: QuickTunnel | null = null;
   let tunnelStatus: TunnelStatus = makeTunnelStatus(false, null);
   let tunnelProbe: { stop(): void } | null = null;
-  // generateAttachToken is kept for legacy/non-TOTP token use, but we no longer
-  // print it in the banner to avoid accidental secret exposure.
-  const _token = generateAttachToken();
-
   // Bring the cloudflared tunnel up in the background so the MCP stdio transport
   // can answer `initialize` immediately. cloudflared has to lazy-download a
   // ~38 MB binary on first run; awaiting it here pushes the initialize response
@@ -2303,6 +2343,10 @@ export async function runDebugServer(options: RunDebugServerOptions = {}): Promi
   // Diagnostics collector — records server-side errors and attach/detach events
   // so `get_debug_status` can surface them in a single call.
   const diagnosticsCollector = new InMemoryDiagnosticsCollector();
+  // Host half of the attach version handshake. `readDevtoolsVersion()` returns
+  // the build-time `__VERSION__` define, or `null` in an unbuilt context — in
+  // which case every comparison reports a match (nothing to contradict).
+  const protocolVersionMonitor = createProtocolVersionMonitor(readDevtoolsVersion());
 
   // FIX (issue #572 review): track the live cloudflared child PID in memory so
   // get_debug_status can pass it to getDiagnostics as source (a). Updated by
@@ -2345,6 +2389,10 @@ export async function runDebugServer(options: RunDebugServerOptions = {}): Promi
               // get_debug_status can distinguish "phone never arrived" from
               // "phone arrived but was rejected".
               onAuthReject: () => diagnosticsCollector.recordAuthReject(),
+              // Attach version handshake: record what the device says it is so
+              // `start_attach` can name a device↔host skew instead of letting
+              // the value-duplicated contract misbehave silently.
+              onAttachHandshake: (event) => protocolVersionMonitor.record(event.deviceVersion),
               // Issue #631: on permanent tunnel drop, immediately push the
               // new state so the dashboard swaps the dead QR for the error
               // state (mirror of onWssUrl's notifyStateChange).
@@ -2472,6 +2520,9 @@ export async function runDebugServer(options: RunDebugServerOptions = {}): Promi
       return qrServer;
     },
     diagnosticsCollector,
+    // Device↔host version skew, or null. Read at call time so a device that
+    // reports after the server was built is still seen.
+    getProtocolVersionSkew: () => protocolVersionMonitor.getMismatch(),
     // SECRET-HANDLING: the TOTP secret is read from env AT CALL TIME (inside
     // start_attach) so the project-local .ait_relay secret loaded by
     // switchMode (#396) is visible. It is used only to generate the at= code and
@@ -2713,6 +2764,10 @@ export async function runLocalDebugServer(options: RunLocalDebugServerOptions = 
   // `relay-live` removed (#665).
   const devtoolsOpener = new AutoDevtoolsOpener();
   const diagnosticsCollector = new InMemoryDiagnosticsCollector();
+  // Host half of the attach version handshake. `readDevtoolsVersion()` returns
+  // the build-time `__VERSION__` define, or `null` in an unbuilt context — in
+  // which case every comparison reports a match (nothing to contradict).
+  const protocolVersionMonitor = createProtocolVersionMonitor(readDevtoolsVersion());
 
   // FIX (issue #572 review): track the live cloudflared child PID in memory so
   // get_debug_status can pass it to getDiagnostics as source (a). Updated by
@@ -2748,6 +2803,10 @@ export async function runLocalDebugServer(options: RunLocalDebugServerOptions = 
               },
               // Issue #467: secret-free relay TOTP 401 counter for get_debug_status.
               onAuthReject: () => diagnosticsCollector.recordAuthReject(),
+              // Attach version handshake: record what the device says it is so
+              // `start_attach` can name a device↔host skew instead of letting
+              // the value-duplicated contract misbehave silently.
+              onAttachHandshake: (event) => protocolVersionMonitor.record(event.deviceVersion),
               // Issue #631: on permanent tunnel drop, immediately push the
               // new state so the dashboard swaps the dead QR for the error
               // state (mirror of onWssUrl's notifyStateChange).
@@ -2865,6 +2924,9 @@ export async function runLocalDebugServer(options: RunLocalDebugServerOptions = 
       return qrServer;
     },
     diagnosticsCollector,
+    // Device↔host version skew, or null. Read at call time so a device that
+    // reports after the server was built is still seen.
+    getProtocolVersionSkew: () => protocolVersionMonitor.getMismatch(),
     // SECRET-HANDLING: the TOTP secret is read from env AT CALL TIME (inside
     // start_attach) so the project-local .ait_relay secret loaded by
     // switchMode (#396) is visible. It is used only to generate the at= code and
@@ -3058,6 +3120,10 @@ export async function runMobileDebugServer(
   // `relay-staging`. `relay-live` removed (#665).
   const devtoolsOpener = new AutoDevtoolsOpener();
   const diagnosticsCollector = new InMemoryDiagnosticsCollector();
+  // Host half of the attach version handshake. `readDevtoolsVersion()` returns
+  // the build-time `__VERSION__` define, or `null` in an unbuilt context — in
+  // which case every comparison reports a match (nothing to contradict).
+  const protocolVersionMonitor = createProtocolVersionMonitor(readDevtoolsVersion());
 
   // FIX (issue #572 review): track the live cloudflared child PID in memory so
   // get_debug_status can pass it to getDiagnostics as source (a). Updated by
@@ -3093,6 +3159,10 @@ export async function runMobileDebugServer(
               },
               // Issue #467: secret-free relay TOTP 401 counter for get_debug_status.
               onAuthReject: () => diagnosticsCollector.recordAuthReject(),
+              // Attach version handshake: record what the device says it is so
+              // `start_attach` can name a device↔host skew instead of letting
+              // the value-duplicated contract misbehave silently.
+              onAttachHandshake: (event) => protocolVersionMonitor.record(event.deviceVersion),
               // Issue #631: on permanent tunnel drop, immediately push the
               // new state so the dashboard swaps the dead QR for the error
               // state (mirror of onWssUrl's notifyStateChange).
@@ -3212,6 +3282,9 @@ export async function runMobileDebugServer(
       return qrServer;
     },
     diagnosticsCollector,
+    // Device↔host version skew, or null. Read at call time so a device that
+    // reports after the server was built is still seen.
+    getProtocolVersionSkew: () => protocolVersionMonitor.getMismatch(),
     // SECRET-HANDLING: the TOTP secret is read from env AT CALL TIME (inside
     // start_attach) so the project-local .ait_relay secret loaded by
     // switchMode (#396) is visible. It is used only to generate the at= code and

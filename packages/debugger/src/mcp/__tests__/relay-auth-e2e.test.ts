@@ -27,12 +27,12 @@
  * printed.
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import WebSocket from 'ws';
 import {
   RELAY_AUTH_REJECT_CLOSE_CODE,
   RELAY_AUTH_REJECT_REASON,
-} from '../../shared/relay-auth-close.js';
+} from '@ait-co/internal-protocol/relay-auth-close';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import WebSocket from 'ws';
 import { type ChiiRelay, type RelayAuthRejectEvent, startChiiRelay } from '../chii-relay.js';
 import { buildRelayVerifyAuth, generateTotp } from '../totp.js';
 

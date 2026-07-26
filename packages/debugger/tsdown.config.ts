@@ -1,4 +1,38 @@
+import { createRequire } from 'node:module';
 import { defineConfig, type Options } from 'tsdown';
+import pkg from './package.json' with { type: 'json' };
+
+// `@modelcontextprotocol/sdk` exposes NEITHER `.` (the bare main entry) NOR
+// `./package.json` in its `exports` map, so both
+// `require.resolve('@modelcontextprotocol/sdk')` and
+// `require.resolve('@modelcontextprotocol/sdk/package.json')` throw at BUILD
+// time. Resolve a subpath that IS in the exports map (`./server/mcp.js`), walk
+// back to the package root via the marker, and read its `package.json` by file
+// path (bypassing the `exports` gate). Falls back to `null` if the resolution
+// shape ever changes.
+const mcpSdkVersion = ((): string | null => {
+  try {
+    const req = createRequire(import.meta.url);
+    const entry = req.resolve('@modelcontextprotocol/sdk/server/mcp.js');
+    const marker = '@modelcontextprotocol/sdk';
+    const root = entry.slice(0, entry.indexOf(marker) + marker.length);
+    const sdkPkg = req(`${root}/package.json`) as { version?: unknown };
+    return typeof sdkPkg.version === 'string' ? sdkPkg.version : null;
+  } catch {
+    return null;
+  }
+})();
+
+// Both constants are substituted as BARE IDENTIFIERS (never
+// `globalThis.__VERSION__` — `define` only rewrites the bare token, and a
+// property access would silently read `undefined`). `__VERSION__` is the host
+// half of the attach version handshake: the daemon compares it with the version
+// the device reports on `/ait-attach`. Keep it in lockstep with
+// `@ait-co/debug-console`'s define — they are a Changesets `fixed` pair.
+const define = {
+  __VERSION__: JSON.stringify(pkg.version),
+  __MCP_SDK_VERSION__: JSON.stringify(mcpSdkVersion),
+};
 
 // This package is devDependency / npx tooling only — every consumer runs on
 // Node 24, so it ships ESM-only. (Contrast @ait-co/debug-console, which can
@@ -10,6 +44,16 @@ import { defineConfig, type Options } from 'tsdown';
 // tsdown.config.ts).
 const outExtensions: Options['outExtensions'] = () => ({ js: '.js', dts: '.d.ts' });
 
+// `src/test-runner/pool.ts` takes its `PoolOptions` / `TestProject` / …
+// shapes from `vitest/node` as a TYPE-ONLY import: the custom pool is handed to
+// the consumer's own Vitest, which supplies the runtime. tsdown externalizes
+// `dependencies` + `peerDependencies` automatically, and vitest is neither
+// here — it is a devDependency — so without this the declaration rollup tries
+// to inline Vitest's public types and, through them, all of vite's and
+// postcss's, and dies on ~125 unresolved re-exports. The emitted `.d.ts` should
+// simply point at `vitest/node`, which is what every consumer already has.
+const external = ['vitest', 'vitest/node'];
+
 const common = {
   dts: true,
   sourcemap: true,
@@ -18,6 +62,8 @@ const common = {
   platform: 'node',
   format: ['esm'],
   outExtensions,
+  define,
+  external,
 } as const;
 
 // Each entry lives in its own config object, mirroring devtools'

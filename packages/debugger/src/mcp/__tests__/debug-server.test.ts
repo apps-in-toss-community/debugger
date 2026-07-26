@@ -128,6 +128,13 @@ interface MakeClientOptions {
    * Pass `undefined` explicitly to test the no-secret rejection path.
    */
   totpSecret?: string | null;
+  /**
+   * Pin a device↔host protocol version skew for `start_attach` (issue #3 §5).
+   * Omitted = no skew reported, i.e. the normal path.
+   */
+  getProtocolVersionSkew?: () =>
+    | import('@ait-co/internal-protocol/attach-handshake').ProtocolVersionCheck
+    | null;
 }
 
 /**
@@ -145,6 +152,7 @@ async function makeClient({
   qrHttpServer,
   env = 'relay-dev',
   totpSecret = DUMMY_SECRET_FOR_TESTS,
+  getProtocolVersionSkew,
 }: MakeClientOptions): Promise<Client> {
   const server = createDebugServer({
     connection: connection ?? new FakeCdpConnection(),
@@ -152,6 +160,7 @@ async function makeClient({
     getTunnelStatus,
     waitForAttachTimeoutMs,
     qrHttpServer,
+    getProtocolVersionSkew,
     getEnvironment: () => env,
     getEnvironmentReason: () => `test-pinned-${env}`,
     // null = caller explicitly wants no secret (for fail-closed tests).
@@ -320,6 +329,76 @@ describe('start_attach — response includes unicode QR', () => {
     const content = getContent(result);
     // 터널 미가동 에러는 한국어 "cloudflared 터널이 안 떠 있습니다" 메시지를 포함한다.
     expect(content[0]!.text).toContain('터널');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// start_attach — device↔host protocol version skew (issue #3 §5)
+//
+// The two published packages are a Changesets `fixed` pair, so equal versions
+// mean "mutually tested". A skewed pair still attaches: the failure mode is an
+// empty indicator, an `undefined` snapshot field, an unrecognised close frame.
+// start_attach is the last point at which the cause is still legible, so it is
+// where the skew has to be named.
+// ---------------------------------------------------------------------------
+
+describe('start_attach — protocol version skew', () => {
+  const tunnelUp: TunnelStatus = { up: true, wssUrl: 'wss://abc123.trycloudflare.com' };
+  const schemeUrl = 'intoss-private://miniapp?_deploymentId=skew-test';
+
+  it('returns a clear error naming both versions when the device reports a skew', async () => {
+    const client = await makeClient({
+      getTunnelStatus: () => tunnelUp,
+      connection: attachedConn(schemeUrl),
+      getProtocolVersionSkew: () => ({ match: false, device: '0.1.0', host: '0.2.0' }),
+    });
+
+    const result = await client.callTool({
+      name: 'start_attach',
+      arguments: { scheme_url: schemeUrl },
+    });
+
+    expect(result.isError).toBe(true);
+    const text = getContent(result)[0]!.text!;
+    expect(text).toContain('@ait-co/debug-console');
+    expect(text).toContain('0.1.0');
+    expect(text).toContain('@ait-co/debugger');
+    expect(text).toContain('0.2.0');
+    // SECRET-HANDLING: the diagnostic carries two version strings and nothing
+    // else — no relay URL, tunnel host, or auth code may ride along.
+    expect(text).not.toContain('wss://');
+    expect(text).not.toContain('trycloudflare');
+    expect(text).not.toContain('at=');
+  });
+
+  it('attaches normally when the versions agree', async () => {
+    const client = await makeClient({
+      getTunnelStatus: () => tunnelUp,
+      connection: attachedConn(schemeUrl),
+      getProtocolVersionSkew: () => null,
+    });
+
+    const result = await client.callTool({
+      name: 'start_attach',
+      arguments: { scheme_url: schemeUrl },
+    });
+
+    expect(result.isError).toBeFalsy();
+  });
+
+  it('attaches normally when no device version was ever reported', async () => {
+    // A device on a build predating the handshake must not be blocked.
+    const client = await makeClient({
+      getTunnelStatus: () => tunnelUp,
+      connection: attachedConn(schemeUrl),
+    });
+
+    const result = await client.callTool({
+      name: 'start_attach',
+      arguments: { scheme_url: schemeUrl },
+    });
+
+    expect(result.isError).toBeFalsy();
   });
 });
 

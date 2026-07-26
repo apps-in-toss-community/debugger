@@ -9,6 +9,7 @@
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
     "typecheck": "pnpm -r typecheck",
+    "check:graph": "node scripts/check-package-graph.mjs",
     "test": "pnpm -r test",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

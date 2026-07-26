@@ -30,6 +30,12 @@ jobs:
 
       - run: pnpm lint
 
+      # Mechanical guard for the dependency edges the split exists to create —
+      # in particular that the daemon never declares the on-device console,
+      # which would pull eruda into its install graph without changing any
+      # bundle a grep could inspect.
+      - run: pnpm check:graph
+
       - run: pnpm typecheck
 
       - run: pnpm build

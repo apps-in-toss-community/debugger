@@ -19,8 +19,8 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { RELAY_AUTH_REJECT_CLOSE_CODE } from '@ait-co/internal-protocol/relay-auth-close';
 import { WebSocket } from 'ws';
-import { RELAY_AUTH_REJECT_CLOSE_CODE } from '../shared/relay-auth-close.js';
 import type {
   CdpCommandMap,
   CdpCommandName,
