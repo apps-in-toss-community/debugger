@@ -5,8 +5,12 @@
   "description": "Shared device<->host wire-protocol source for @ait-co/debugger and @ait-co/debug-console — workspace-internal only, never published; consumed as raw TypeScript by sibling packages' bundlers.",
   "type": "module",
   "sideEffects": false,
-  "types": "./src/index.ts",
-  "main": "./src/index.ts",
+  "exports": {
+    "./relay-auth-close": "./src/relay-auth-close.ts",
+    "./debug-host": "./src/debug-host.ts",
+    "./bridge-observer-state": "./src/bridge-observer-state.ts",
+    "./attach-handshake": "./src/attach-handshake.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

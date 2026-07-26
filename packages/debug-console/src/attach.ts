@@ -10,14 +10,19 @@
  * npm dependency is needed here.
  */
 
-import { setScreenAwakeMode } from '@apps-in-toss/web-framework';
+import {
+  ATTACH_HANDSHAKE_PATH,
+  ATTACH_HANDSHAKE_VERSION_PARAM,
+} from '@ait-co/internal-protocol/attach-handshake';
+import { RELAY_WS_STATE_EVENT } from '@ait-co/internal-protocol/bridge-observer-state';
 import {
   RELAY_AUTH_REJECT_CLOSE_CODE,
   RELAY_AUTH_REJECT_REASON,
-} from '../shared/relay-auth-close.js';
+} from '@ait-co/internal-protocol/relay-auth-close';
 import { installBridgeObserver, uninstallBridgeObserver } from './bridge-observer.js';
 import { mountEruda, unmountEruda } from './eruda-overlay.js';
 import { checkDebugGate, type GateResult } from './index.js';
+import { setScreenAwake, setScreenAwakeNow } from './sdk-probe.js';
 
 /**
  * Converts a validated `wss:` relay URL into the Chii `target.js` script URL.
@@ -62,6 +67,63 @@ export function deriveTargetScriptUrl(relayUrl: string, atCode?: string | null):
   u.search = '';
   u.hash = '';
   return u.toString();
+}
+
+/**
+ * Converts a validated `wss:` relay URL into the version-handshake URL.
+ *
+ * Same scheme/host/TOTP-prefix derivation as {@link deriveTargetScriptUrl},
+ * with this package's build-time `__VERSION__` as the single query value. The
+ * handshake gets its own path rather than a query on `target.js` because chii's
+ * stock `target.js` derives its WebSocket endpoint from its own script `src`
+ * (`src.replace('target.js', '')`) and then appends `target/<id>` — a query
+ * string there would land in the middle of the derived endpoint.
+ *
+ * SECRET-HANDLING: `atCode` rides only inside the returned URL (the same
+ * transport the target script already uses) and is never logged.
+ *
+ * @param relayUrl - Validated `wss:` relay URL from the gate result.
+ * @param atCode - Current TOTP code from the page URL's `at` query param, or
+ *   `null`/`undefined`/`''` for the un-prefixed form.
+ */
+export function deriveHandshakeUrl(relayUrl: string, atCode?: string | null): string {
+  const u = new URL(relayUrl);
+  u.protocol = 'https:';
+  u.pathname =
+    atCode !== undefined && atCode !== null && atCode !== ''
+      ? `/at/${encodeURIComponent(atCode)}${ATTACH_HANDSHAKE_PATH}`
+      : ATTACH_HANDSHAKE_PATH;
+  u.search = `?${ATTACH_HANDSHAKE_VERSION_PARAM}=${encodeURIComponent(__VERSION__)}`;
+  u.hash = '';
+  return u.toString();
+}
+
+/**
+ * Reports this package's build-time version to the relay, fire-and-forget.
+ *
+ * Runs just before `target.js` is injected. Deliberately unawaited and
+ * fail-silent: a device↔host version skew is worth a diagnostic on the daemon
+ * side, never a reason to hold up or abort an attach. `mode: 'no-cors'` because
+ * the relay origin differs from the page origin and we have no use for the
+ * response — the daemon is the only party that acts on this.
+ *
+ * SECRET-HANDLING: the URL (which carries the TOTP code in its path prefix) is
+ * never logged, not even on failure.
+ */
+function reportProtocolVersion(relayUrl: string, atCode?: string | null): void {
+  if (typeof fetch !== 'function') return;
+  try {
+    void fetch(deriveHandshakeUrl(relayUrl, atCode), {
+      method: 'GET',
+      mode: 'no-cors',
+      cache: 'no-store',
+      keepalive: true,
+    }).catch(() => {
+      // Handshake is best-effort — a dropped ping only costs the diagnostic.
+    });
+  } catch {
+    // URL construction or a hardened fetch can throw synchronously; ignore.
+  }
 }
 
 /** Module-level guard against double-injection within a page lifecycle. */
@@ -111,7 +173,7 @@ declare global {
  */
 function broadcastRelayWsState(state: 'open' | 'close'): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('ait:relay-ws-state', { detail: { state } }));
+  window.dispatchEvent(new CustomEvent(RELAY_WS_STATE_EVENT, { detail: { state } }));
 }
 
 /**
@@ -336,12 +398,18 @@ export function detachDebugSurface(): void {
     // Belt-and-suspenders — uninstall is already internally guarded.
   }
 
-  // 4. Restore normal screen sleep. SECRET-HANDLING: no relay/TOTP value is
-  // read or logged here — this only flips the awake flag off.
+  // 4. Restore normal screen sleep. Runtime probe — a no-op when the SDK is
+  // absent or predates the API (see sdk-probe.ts). The synchronous form comes
+  // first because one caller of this function is the `pagehide` handler, and a
+  // page being torn down owes us no microtask turn: after a successful attach
+  // the probe is already warm, so the release is dispatched in this tick. The
+  // async form is the fallback for a teardown that runs before any probe has
+  // resolved. SECRET-HANDLING: no relay/TOTP value is read or logged here —
+  // this only flips the awake flag.
   try {
-    void setScreenAwakeMode({ enabled: false }).catch(() => {});
+    if (!setScreenAwakeNow(false)) void setScreenAwake(false);
   } catch {
-    // Some platforms/mock reject synchronously — swallow.
+    // Neither form throws, but keep teardown bullet-proof.
   }
 }
 
@@ -515,7 +583,7 @@ export function maybeAttach(gateResult: GateResult = checkDebugGate()): void {
 
   if (!gateResult.attach) {
     console.debug(
-      `[@ait-co/devtools] debug attach skipped — gate blocked (reason: ${gateResult.reason})`,
+      `[@ait-co/debug-console] debug attach skipped — gate blocked (reason: ${gateResult.reason})`,
     );
     // Defect 2: a wrong/expired TOTP code is the ONLY block reason that is a
     // user-actionable failure inside a deliberate debug session — the operator
@@ -559,6 +627,12 @@ export function maybeAttach(gateResult: GateResult = checkDebugGate()): void {
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('at') : null;
 
   const src = deriveTargetScriptUrl(gateResult.relayUrl, atCode);
+
+  // Version handshake: tell the daemon which build of this package is attaching
+  // so a device↔host skew becomes one diagnostic line instead of a silent
+  // misbehaviour (see @ait-co/internal-protocol/attach-handshake). Fire-and-
+  // forget — never awaited, never able to block or fail an attach.
+  reportProtocolVersion(gateResult.relayUrl, atCode);
 
   // Issue #478: observe relay-bound WebSockets BEFORE target.js is injected so
   // even its very first dial — and every autonomous reconnect after a session
@@ -620,20 +694,23 @@ export function maybeAttach(gateResult: GateResult = checkDebugGate()): void {
     return;
   }
 
-  setScreenAwakeMode({ enabled: true })
-    .then(() => {
-      // Restore normal sleep on page unload — only if the enable call succeeded
-      // (nothing to restore if it failed).
-      window.addEventListener(
-        'beforeunload',
-        () => {
-          setScreenAwakeMode({ enabled: false }).catch(() => {});
-        },
-        { once: true },
-      );
-    })
-    .catch((err) => {
-      // Swallow rejection so attach never breaks — some platforms/mock reject.
-      console.debug('[@ait-co/devtools] setScreenAwakeMode failed:', err);
-    });
+  // Runtime probe rather than a static import: `setScreenAwakeMode` does not
+  // exist on `@apps-in-toss/web-framework` 2.x's web surface at all, so a
+  // static import would break every 2.x consumer — and it would drag the SDK
+  // into this package's graph, which must stay `eruda`-only (see sdk-probe.ts).
+  void setScreenAwake(true).then((held) => {
+    // Restore normal sleep on page unload — only if the enable call landed
+    // (nothing to restore when the API was unavailable or rejected).
+    if (!held) return;
+    window.addEventListener(
+      'beforeunload',
+      () => {
+        // Synchronous: the probe is warm by construction here (the enable call
+        // above is what warmed it), and an unloading page may not run another
+        // microtask turn. See sdk-probe.ts's `getLoadedTossSdk`.
+        if (!setScreenAwakeNow(false)) void setScreenAwake(false);
+      },
+      { once: true },
+    );
+  });
 }

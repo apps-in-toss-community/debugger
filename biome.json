@@ -6,7 +6,16 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/build", "!**/coverage", "!**/node_modules", "!.changeset"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/build",
+      "!**/coverage",
+      "!**/node_modules",
+      "!.changeset",
+      "!.claude",
+      "!packages/debugger/src/mcp/dashboard.generated.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -38,5 +47,17 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/debugger/scripts/dashboard/**"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          }
+        }
+      }
+    }
+  ]
 }

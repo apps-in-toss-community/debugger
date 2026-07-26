@@ -37,7 +37,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { isPidAlive as _isPidAlive } from '../shared/parent-watcher.js';
+import { isPidAlive as _isPidAlive } from './parent-watcher.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -125,7 +125,7 @@ function ensureLockDir(lockPath: string): void {
 /**
  * Returns `true` when the given PID refers to a running process.
  *
- * Re-exported from `../shared/parent-watcher` so external callers that
+ * Re-exported from `./parent-watcher` so external callers that
  * import from `./server-lock` keep working without an import-path change.
  */
 export const isPidAlive: (pid: number) => boolean = _isPidAlive;

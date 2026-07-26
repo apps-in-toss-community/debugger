@@ -65,11 +65,15 @@ import type { Duplex } from 'node:stream';
 // chii's tree — same principle as the ajv incident): the reject path below
 // needs `WebSocketServer.handleUpgrade` to complete a handshake we are about
 // to close with a named code.
-import { type WebSocket, WebSocketServer } from 'ws';
+import {
+  ATTACH_HANDSHAKE_PATH,
+  ATTACH_HANDSHAKE_VERSION_PARAM,
+} from '@ait-co/internal-protocol/attach-handshake';
 import {
   RELAY_AUTH_REJECT_CLOSE_CODE,
   RELAY_AUTH_REJECT_REASON,
-} from '../shared/relay-auth-close.js';
+} from '@ait-co/internal-protocol/relay-auth-close';
+import { type WebSocket, WebSocketServer } from 'ws';
 
 const require = createRequire(import.meta.url);
 
@@ -207,6 +211,22 @@ export interface RelayAuthRejectEvent {
 }
 
 /**
+ * A device's version report on the attach handshake path (see
+ * `@ait-co/internal-protocol/attach-handshake`).
+ *
+ * SECRET-HANDLING: this event carries ONLY the reported version string. It must
+ * never grow fields for `req.url`, the TOTP code its path prefix carries, or
+ * the relay host.
+ */
+export interface AttachHandshakeEvent {
+  /**
+   * The `@ait-co/debug-console` build version the device reported, or `''` when
+   * the query parameter was absent or empty.
+   */
+  deviceVersion: string;
+}
+
+/**
  * Rewrites a `/at/<code>/…` path-prefixed request URL into the equivalent
  * query-based form, e.g.:
  *
@@ -279,6 +299,20 @@ export interface StartChiiRelayOptions {
    */
   onAuthReject?: (event: RelayAuthRejectEvent) => void;
   /**
+   * Fired when a device reports its package version on the attach handshake
+   * path, just before it injects `target.js`.
+   *
+   * The daemon compares the reported version with its own `__VERSION__` so a
+   * device↔host skew surfaces as one diagnostic line instead of the silent
+   * misbehaviour it would otherwise be (an empty indicator, an `undefined`
+   * field, an unrecognised close frame). Exceptions thrown by the callback are
+   * swallowed so observability can never break the relay.
+   *
+   * SECRET-HANDLING: the event carries ONLY the version string — never
+   * `req.url`, the TOTP code that rides in its path prefix, or the relay host.
+   */
+  onAttachHandshake?: (event: AttachHandshakeEvent) => void;
+  /**
    * WS protocol ping interval in milliseconds (issue #483).
    *
    * The relay sends a ping frame to every connected WebSocket at this interval
@@ -314,7 +348,7 @@ export interface StartChiiRelayOptions {
 export async function startChiiRelay(options: StartChiiRelayOptions = {}): Promise<ChiiRelay> {
   const requestedPort = options.port ?? 0;
   const host = options.host ?? '127.0.0.1';
-  const { verifyAuth, onAuthReject } = options;
+  const { verifyAuth, onAuthReject, onAttachHandshake } = options;
   const keepaliveIntervalMs =
     options.keepaliveIntervalMs !== undefined
       ? options.keepaliveIntervalMs
@@ -423,6 +457,46 @@ export async function startChiiRelay(options: StartChiiRelayOptions = {}): Promi
       // so the 401 paths above are safe even though Koa still runs.)
     });
   }
+
+  // Attach version handshake. Registered AFTER the auth listener above and
+  // BEFORE chii.start(), which puts it in exactly the right slot: a rejected
+  // request has already been ended (the `writableEnded` guard below skips it),
+  // an authorised path-prefixed request has already had `req.url` normalised to
+  // the query form, and chii's Koa handler never sees a route it does not own.
+  //
+  // Unlike the auth listener this one is registered unconditionally — the
+  // handshake exists to diagnose version skew, which is just as likely on a
+  // local no-TOTP session as on a tunnelled one.
+  //
+  // SECRET-HANDLING: only the version string is read out and forwarded. The URL
+  // (which carries the TOTP code in its path prefix) is never logged, and the
+  // response body is empty.
+  httpServer.on('request', (req, res) => {
+    if (res.writableEnded) return;
+    const raw = req.url ?? '';
+    // Normalise for READING only — the auth listener above owns mutation of
+    // `req.url`, and it does not run when no verifier is configured.
+    const normalised = rewriteAtPathPrefix(raw) ?? raw;
+    const questionMark = normalised.indexOf('?');
+    const pathname = questionMark === -1 ? normalised : normalised.slice(0, questionMark);
+    if (pathname !== ATTACH_HANDSHAKE_PATH) return;
+
+    const query = questionMark === -1 ? '' : normalised.slice(questionMark + 1);
+    const deviceVersion = new URLSearchParams(query).get(ATTACH_HANDSHAKE_VERSION_PARAM) ?? '';
+    if (onAttachHandshake !== undefined) {
+      try {
+        onAttachHandshake({ deviceVersion });
+      } catch {
+        // Observability is best-effort — never let it break the relay.
+      }
+    }
+    // 204 + CORS: the device pings this cross-origin with `mode: 'no-cors'` and
+    // ignores the response entirely. The header rides only on this empty
+    // response and exposes no relay asset.
+    res.statusCode = 204;
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.end();
+  });
 
   // WS keepalive (issue #483): capture chii's WebSocketServer instance so we
   // can read `_wss.clients` and send periodic ping frames.

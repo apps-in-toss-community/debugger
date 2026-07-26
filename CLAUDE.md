@@ -37,9 +37,11 @@ packages/internal-protocol/      private: true, never published
                                   device<->host shared source, no barrel index, "sideEffects": false
 ```
 
-### Current status (as of the initial scaffold)
+### Current status
 
-This repo started as workspace scaffolding + configuration only — `pnpm-workspace.yaml`, per-package `package.json`/`tsconfig.json`/`tsdown.config.ts`/`vitest.config.ts`, CI, release workflow, Changesets config, docs. Every `src/` file you'll find right now is a small placeholder (a single exported constant, or — for the two bin entries — a guarded `main()` that just prints a notice). **Real source code is vendored in a follow-up commit** from `devtools`'s `src/mcp/`, `src/in-app/`, `src/test-runner/`, and part of `src/shared/` (see `devtools` issue #813, "SPLIT FREEZE", for the exact freeze boundary — `relay-auth-close` moves into `internal-protocol`, `parent-watcher` stays in `devtools` since it is host-only). CI guard scripts that mechanically enforce the invariants below (e.g. a bundle grep confirming the MCP daemon output is react-free) are follow-up work too — until they land, the invariants below are enforced by review discipline, not by a script.
+The workspace scaffolding landed first (`pnpm-workspace.yaml`, per-package `package.json`/`tsconfig.json`/`tsdown.config.ts`/`vitest.config.ts`, CI, release workflow, Changesets config, docs), then the real source was vendored from `devtools`'s `src/mcp/`, `src/in-app/`, `src/test-runner/`, and part of `src/shared/` (see `devtools` issue #813, "SPLIT FREEZE", for the freeze boundary). The cross-package seams are resolved: `relay-auth-close`, the host-allowlist predicates, the bridge-observer snapshot shape, and the attach version handshake live in `internal-protocol`, and `parent-watcher` was copied into `packages/debugger/src/mcp/` — it is host-only in the sense that it does not belong in `internal-protocol` (it is `process.kill(pid, 0)`, not device↔host shared), but the daemon is the host and imports it, so it could not stay behind in `devtools`; that repo keeps its own copy for the unplugin tunnel path.
+
+Invariant 1, 2, and 4 below are enforced mechanically by `pnpm check:graph` (`scripts/check-package-graph.mjs`), which runs in CI. The remaining bundle-shaped guards under `packages/debugger/scripts/` (react-free daemon output, debug-surface absence, test-runner dist) are vendored but not yet wired into the workflow — until they are, invariant 3 rests on review discipline.
 
 ## Invariants (the whole reason this repo is split the way it is)
 

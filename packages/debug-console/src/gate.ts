@@ -10,7 +10,7 @@
  * entirely by the consumer's `if (__DEBUG_BUILD__) { … }` guard around the
  * import site (see sdk-example `src/main.tsx`). `__DEBUG_BUILD__` is a
  * consumer-build-time constant; a release consumer build folds it to `false`
- * and dead-code-eliminates the whole import of `@ait-co/devtools/in-app`, so
+ * and dead-code-eliminates the whole import of `@ait-co/debug-console`, so
  * this code is simply absent from release bundles. A pre-built npm package
  * cannot re-check that flag — it was already baked at devtools' own publish
  * time — so any `isDebugBuild` check inside this function would be permanently
@@ -84,6 +84,28 @@
  *   C1/C2/C3 still apply identically. The ATTACH result carries
  *   `deploymentId: ''` for tunnel hosts.
  */
+
+// Layer B1's host predicates are the one part of this gate the DAEMON also
+// evaluates (it re-checks a CDP target's URL before driving it). They therefore
+// live in the shared protocol package instead of here — before the split the
+// daemon reached into this file, a reverse edge that would have dragged the
+// browser bundle into the daemon's graph. Re-exported below so this module's
+// public surface is unchanged.
+import {
+  isDebugAllowedHost,
+  isLocalhostHost,
+  isPrivateAppsHost,
+  isTossminiHost,
+  isTrycloudflareHost,
+} from '@ait-co/internal-protocol/debug-host';
+
+export {
+  isDebugAllowedHost,
+  isLocalhostHost,
+  isPrivateAppsHost,
+  isTossminiHost,
+  isTrycloudflareHost,
+} from '@ait-co/internal-protocol/debug-host';
 
 /** Shape returned when the gate allows attachment. */
 export interface GateResultAttach {
@@ -170,148 +192,6 @@ export interface GateInput {
    * proceeds to ATTACH if all other layers pass.
    */
   readonly verifyTotpCode?: (code: string) => boolean;
-}
-
-/**
- * The host suffix the Toss app uses to serve dogfood / private mini-apps.
- *
- * A `intoss-private://` (dogfood) entry maps to a host such as
- * `aitc-sdk-example.private-apps.tossmini.com`. A production `intoss://`
- * entry is served from `*.apps.tossmini.com` — the `.private-apps.` segment
- * is absent. Confirmed live over CDP for mini-app 31146; the exact production
- * host is to be re-confirmed once 31146 passes review (spec open question 2).
- */
-const PRIVATE_APPS_HOST_SUFFIX = '.private-apps.tossmini.com';
-
-/**
- * The host suffix Cloudflare quick-tunnels serve from — the env 2 (PWA) entry.
- * See {@link isTrycloudflareHost} for why this host kind bypasses Layer B1.
- */
-const TRYCLOUDFLARE_HOST_SUFFIX = '.trycloudflare.com';
-
-/**
- * Returns whether `hostname` is a `*.private-apps.tossmini.com` subdomain —
- * the host the Toss app reserves for dogfood / private mini-app entries.
- *
- * The match is an exact suffix check, not a substring `.includes()`: a
- * substring test would also accept an attacker-controlled host like
- * `private-apps.tossmini.com.evil.example`, which ends in `.example`, not in
- * `.tossmini.com`. Requiring the string to END with the suffix closes that.
- * The leading `.` in the suffix also forces a real subdomain label, so a
- * bare `private-apps.tossmini.com` (no mini-app subdomain) does not match.
- */
-export function isPrivateAppsHost(hostname: string): boolean {
-  return hostname.endsWith(PRIVATE_APPS_HOST_SUFFIX);
-}
-
-/**
- * The parent host suffix for the whole Toss mini-app serving family.
- *
- * The 3.0 runtime loader serves mini-app pages from tossmini.com hosts that
- * are NOT `*.private-apps.tossmini.com` (observed live 2026-07-08 on mini-app
- * 31146 with a 3.0-beta bundle: a 4-label host ending in `.tossmini.com`
- * whose middle label is not `private-apps`, with `_deploymentId` consumed by
- * the native loader and not propagated to the page URL — devtools#760).
- *
- * Under 3.0 the hostname therefore no longer distinguishes a dogfood
- * candidate from a production entry, so for these hosts Layer B is demoted
- * from a stage discriminator (#665) to a "Toss-owned host family" filter,
- * and the effective boundary moves to Layer C: explicit `debug=1`, a valid
- * `wss:` relay, and a MANDATORY `at=` TOTP code (see Layer C3 in
- * {@link evaluateDebugGate}). A production user's entry URL carries none of
- * those params, so an accidentally-shipped debug build stays dormant exactly
- * as #665 intended; what changes is that a deliberate operator holding the
- * TOTP secret can now attach on a 3.0-family host.
- *
- * The match is the same exact-suffix `endsWith` check as
- * {@link isPrivateAppsHost} — never a substring `.includes()`, which would
- * accept an attacker-controlled `x.tossmini.com.evil.example`. The leading
- * `.` forces at least one subdomain label, so a bare `tossmini.com` does not
- * match.
- */
-const TOSSMINI_HOST_SUFFIX = '.tossmini.com';
-
-/**
- * Returns whether `hostname` is any `*.tossmini.com` subdomain — the host
- * family the Toss app serves mini-app pages from. Includes the 2.x
- * `*.private-apps.tossmini.com` dogfood hosts and the 3.0 unified serving
- * hosts (devtools#760).
- */
-export function isTossminiHost(hostname: string): boolean {
-  return hostname.endsWith(TOSSMINI_HOST_SUFFIX);
-}
-
-/**
- * The host suffix Cloudflare quick-tunnels use — the env 2 (PWA) entry.
- *
- * Env 2 serves the local Vite dev server through a `*.trycloudflare.com` quick
- * tunnel (`src/unplugin/tunnel.ts`). It has no Toss app, no `intoss-private://`
- * scheme, and — critically — no production runtime: the SDK is the devtools
- * mock, and the page is the developer's own dev build. The Layer B1 safety net
- * (which stops a dogfood build that lands on a Toss *production* host from
- * attaching) has nothing to protect against here, because env 2 has no
- * production host. So a trycloudflare host is allowed past B1 — but ONLY past
- * B1: the remaining layers (C1 opt-in, C2 relay, C3 TOTP) still apply, so a
- * leaked tunnel URL is still blocked by TOTP exactly as on the Toss path.
- *
- * The match is the same exact-suffix `endsWith` check as
- * {@link isPrivateAppsHost} — never a substring `.includes()`, which would
- * accept an attacker-controlled `evil.trycloudflare.com.example.com`. The
- * leading `.` forces a real subdomain label, so a bare `trycloudflare.com`
- * (no tunnel subdomain) does not match.
- */
-export function isTrycloudflareHost(hostname: string): boolean {
-  return hostname.endsWith(TRYCLOUDFLARE_HOST_SUFFIX);
-}
-
-/**
- * Returns true when the hostname is a localhost/loopback address.
- * Allowed: `localhost`, `127.x.x.x` (full RFC 5735 loopback block), `[::1]`,
- * `0.0.0.0`, `*.localhost`.
- *
- * Security note: `hostname.startsWith('127.')` is intentionally NOT used —
- * that pattern would accept `127.evil.com`, which starts with "127." but is an
- * attacker-controlled hostname, not a loopback address. Instead, the 127/8
- * loopback block is matched with a strict numeric-quad regex so only valid
- * dotted-decimal IPv4 in the 127.x.x.x range pass (#665 작업 A fix).
- */
-export function isLocalhostHost(hostname: string): boolean {
-  if (hostname === 'localhost' || hostname === '0.0.0.0') return true;
-  if (hostname === '[::1]') return true;
-  // Match the entire 127/8 loopback block (127.0.0.0 – 127.255.255.255).
-  // Each octet is one or more digits — no hostname label can look like this, so
-  // the regex unambiguously selects IPv4 loopback addresses only.
-  if (/^127\.\d+\.\d+\.\d+$/.test(hostname)) return true;
-  if (hostname.endsWith('.localhost')) return true;
-  return false;
-}
-
-/**
- * Positive-allowlist kill-switch (#665): returns true when the hostname is a
- * known debug-allowed host. The debug surface is ONLY active on:
- *   - localhost / loopback (env 1 desktop dev)
- *   - *.trycloudflare.com (env 2 PWA tunnel)
- *   - *.tossmini.com (env 3 dog-food — 2.x private-apps hosts AND the 3.0
- *     unified serving family, devtools#760)
- *
- * Any other host is silently blocked. This is a positive allowlist —
- * unlisted hosts never had debug surface regardless, but this function makes
- * it explicit and auditable in a single place.
- *
- * #760 note on the #665 boundary: the former env 4 LIVE host family
- * (`*.apps.tossmini.com`) now passes this coarse filter because the 3.0
- * loader serves dogfood candidates and production entries from the same
- * host family — the hostname alone can no longer separate them. The #665
- * invariant ("no naked attach on a production-family host") is preserved
- * one layer down: on tossmini hosts that are not `*.private-apps.*`, Layer
- * C3 makes the TOTP `at=` code MANDATORY, and production entry URLs carry
- * no debug/relay/at params at all.
- *
- * SECRET-HANDLING: the hostname value MUST NOT be logged or included in any
- * error reason string — only benign labels ('host not in allowlist') are safe.
- */
-export function isDebugAllowedHost(hostname: string): boolean {
-  return isLocalhostHost(hostname) || isTrycloudflareHost(hostname) || isTossminiHost(hostname);
 }
 
 /**

@@ -13,12 +13,12 @@
  */
 
 import http from 'node:http';
-import { describe, expect, it } from 'vitest';
-import { WebSocketServer } from 'ws';
 import {
   RELAY_AUTH_REJECT_CLOSE_CODE,
   RELAY_AUTH_REJECT_REASON,
-} from '../../shared/relay-auth-close.js';
+} from '@ait-co/internal-protocol/relay-auth-close';
+import { describe, expect, it } from 'vitest';
+import { WebSocketServer } from 'ws';
 import { ChiiCdpConnection, isRelayDisconnectMessage } from '../chii-connection.js';
 import { generateTotp } from '../totp.js';
 

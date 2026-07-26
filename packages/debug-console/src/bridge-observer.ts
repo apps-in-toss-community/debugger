@@ -40,37 +40,22 @@
  * surface-absent). Never throws into the host app — every hook is guarded.
  */
 
-/** Name of the API being called (never its arguments). */
-export interface BridgePendingCall {
-  method: string;
-  /** `Date.now()` epoch ms when the call was dispatched. */
-  startedAt: number;
-}
+// The snapshot shape and the event name are the device half of a contract the
+// daemon reads back through a CDP source string, so they live in the shared
+// protocol package rather than here (see
+// `@ait-co/internal-protocol/bridge-observer-state`). They are re-exported so
+// this module's public surface is unchanged for consumers.
+import {
+  BRIDGE_CALL_EVENT,
+  type BridgeObserverState,
+} from '@ait-co/internal-protocol/bridge-observer-state';
 
-/** The most-recent bridge activity — API name + wall-clock + settle status. */
-export interface BridgeLastCall {
-  method: string;
-  /** `Date.now()` epoch ms of the start or settle that produced this record. */
-  at: number;
-  status: 'pending' | 'resolved' | 'rejected';
-}
-
-/**
- * The snapshot exposed on `window.__ait_bridge`. `pending` is keyed by
- * correlation id so a settle is an O(1) delete; the indicator reads
- * `Object.values(pending)` and computes each call's live elapsed itself.
- */
-export interface BridgeObserverState {
-  pending: Record<string, BridgePendingCall>;
-  last: BridgeLastCall | null;
-}
-
-/**
- * CustomEvent fired (no detail) on every start/settle so the indicator badge
- * re-renders promptly. SECRET-HANDLING: carries no detail payload at all — the
- * badge reads the enum-only `window.__ait_bridge` snapshot on receipt.
- */
-export const BRIDGE_CALL_EVENT = 'ait:bridge-call';
+export {
+  BRIDGE_CALL_EVENT,
+  type BridgeLastCall,
+  type BridgeObserverState,
+  type BridgePendingCall,
+} from '@ait-co/internal-protocol/bridge-observer-state';
 
 /**
  * Pending entries older than this are pruned on the next start — a safety net
@@ -90,7 +75,7 @@ declare global {
      * a context with no observable bridge (env 2 mock). SECRET-HANDLING: holds
      * API names + timings only — never arguments or results.
      */
-    __ait_bridge?: BridgeObserverState;
+    __ait_bridge?: BridgeObserverState | undefined;
     /**
      * 3.0-line native bridge (`@apps-in-toss/webview-bridge`
      * `injectNativeBridge`). `callAsyncMethod` is the single async dispatcher
