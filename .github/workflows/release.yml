@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.SYNC_APP_ID }}
+          private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      - run: pnpm build
+
+      - run: pnpm test
+
+      # This repo has a `packages/*` workspace, so Changesets runs in
+      # monorepo mode: tags come out as `@ait-co/debugger@X.Y.Z` /
+      # `@ait-co/debug-console@X.Y.Z` (not a single repo-wide tag), and a
+      # single version bump produces TWO GitHub Releases (one per published
+      # package — `internal-protocol` is private and never tagged/released).
+      # `fixed` (.changeset/config.json) keeps both published packages'
+      # version numbers moving together even when only one has real changes,
+      # so the two releases always name the same X.Y.Z. This is expected and
+      # correct here — do not try to collapse it into one release.
+      - uses: changesets/action@v1
+        with:
+          # `changesets/action` creates GitHub Releases by parsing `New tag:`
+          # lines from the publish command's stdout. Only `@changesets/cli
+          # publish` emits those lines — raw `npm publish` does not, which
+          # silently skips Release creation. So we go through `changeset
+          # publish`, which itself shells out to npm publish under the hood.
+          publish: pnpm exec changeset publish
+          version: pnpm changeset version
+          createGithubReleases: true
+        env:
+          # App token (not GITHUB_TOKEN) so the release/tag chain triggers
+          # downstream workflows. GitHub does not fire `release.published`
+          # for releases created by GITHUB_TOKEN.
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          NPM_CONFIG_PROVENANCE: true

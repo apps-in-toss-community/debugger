@@ -1,0 +1,18 @@
+node_modules
+dist
+coverage
+
+.claude/settings.local.json
+.claude/*.lock
+.claude.lock
+.claude/worktrees/
+
+.DS_Store
+*.log
+.codegraph/
+
+# SECRET-HANDLING (see CLAUDE.md): relay state files carry TOTP secrets,
+# wss:// relay URLs, and tunnel hostnames. Never track them — mode 0600
+# on disk is the other half of this contract.
+.ait_relay
+.ait_urls
