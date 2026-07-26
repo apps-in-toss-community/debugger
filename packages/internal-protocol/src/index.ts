@@ -1,16 +1,55 @@
 /**
- * Placeholder for the shared device<->host wire-protocol source.
+ * Vendored verbatim from devtools' `src/shared/relay-auth-close.ts`
+ * (devtools@61aa2d0228df27c2c0ab2405726dd5301067981e, "SPLIT FREEZE"
+ * devtools#813). `src/shared/parent-watcher.ts` (host-only,
+ * `process.kill(pid, 0)`) deliberately did NOT come across — it stays in
+ * devtools.
  *
- * D2 vendors the real modules from devtools' `src/shared/` (frozen at
- * devtools#813, "SPLIT FREEZE" — `relay-auth-close` moves here;
- * `parent-watcher` stays in devtools as host-only). The eventual shape is
- * **not** a single barrel index — each protocol message type gets its own
- * module, imported by deep path from `@ait-co/debugger` and
- * `@ait-co/debug-console` (see CLAUDE.md "no barrel index"). This single
- * placeholder file exists only so D2 has somewhere to land; expect it to be
- * deleted / split apart once the real modules arrive.
+ * This lands at `src/index.ts` (rather than a `relay-auth-close.ts` sibling)
+ * only because the D1 scaffold's `package.json` (`"main"`/`"types":
+ * "./src/index.ts"`) already wires this exact path as the package's sole
+ * entry point, and D2 is a pure-relocation step that must not touch D1's
+ * configuration files. The "no barrel index — one module per protocol
+ * message type" shape described in this repo's CLAUDE.md is D3's job (this
+ * repo's issue #3), not this commit's.
  *
- * Never published — private workspace package, consumed as raw TypeScript
- * directly by sibling packages' bundlers (no build step of its own).
+ * Shared constants for the relay's named TOTP-auth rejection (issue #478).
+ *
+ * Before #478 the relay rejected an unauthenticated WebSocket upgrade with a
+ * raw `HTTP/1.1 401` + `socket.destroy()`. A handshake aborted that way is
+ * indistinguishable from a network failure on the browser side — the
+ * WebSocket only ever sees close code 1006, so the phone (env-2 launcher PWA)
+ * could not tell "stale TOTP code" apart from "tunnel down" and stayed
+ * silent. The fix is accept-then-close: complete the handshake, then close
+ * with an application close code that NAMES the rejection.
+ *
+ * Three parties share this contract:
+ *   - `src/mcp/chii-relay.ts` (Node) sends the close frame / HTTP error body;
+ *   - `src/in-app/attach.ts` (browser) observes relay-bound WebSockets and
+ *     surfaces the code to the launcher shell;
+ *   - `src/mcp/chii-connection.ts` (Node daemon client) recognises the code
+ *     as an auth failure on its own `/client` dial (defensive — #439's fresh
+ *     code mint means it should not normally hit this).
+ *
+ * This module is intentionally dependency-free (no Node, no DOM) so it is
+ * safe to import from both the browser in-app bundle and the MCP daemon
+ * bundle.
+ *
+ * SECRET-HANDLING: these are fixed enum values. The close reason / error body
+ * must never grow to carry a secret, a TOTP code, or a host.
  */
-export const INTERNAL_PROTOCOL_PLACEHOLDER = '@ait-co/internal-protocol' as const;
+
+/**
+ * WebSocket close code sent by the relay when TOTP auth is rejected.
+ *
+ * 4000–4999 is the application-reserved range (RFC 6455 §7.4.2); 4401 mirrors
+ * HTTP 401 so it reads as "unauthorized" at a glance.
+ */
+export const RELAY_AUTH_REJECT_CLOSE_CODE = 4401;
+
+/**
+ * Close reason string accompanying {@link RELAY_AUTH_REJECT_CLOSE_CODE}, and
+ * the `error` value of the relay's HTTP 401 JSON body. Enum string only —
+ * never interpolated with request data.
+ */
+export const RELAY_AUTH_REJECT_REASON = 'totp-rejected';
