@@ -12,6 +12,8 @@
       "!**/build",
       "!**/coverage",
       "!**/node_modules",
+      "!playwright-report",
+      "!test-results",
       "!.changeset",
       "!.claude",
       "!packages/debugger/src/mcp/dashboard.generated.ts"

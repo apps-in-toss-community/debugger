@@ -32,9 +32,14 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsdown",
+    "build:dashboard-html": "tsx --tsconfig scripts/tsconfig.json scripts/build-dashboard-html.ts",
+    "build": "pnpm build:dashboard-html && tsdown",
+    "check:mcp-react-free": "bash scripts/check-mcp-react-free.sh",
+    "check:test-runner-dist": "bash scripts/check-test-runner-dist.sh",
+    "check:debug-surface-absent": "bash scripts/check-debug-surface-absent.sh",
+    "check:dashboard-html-fresh": "pnpm build:dashboard-html && git diff --exit-code src/mcp/dashboard.generated.ts",
     "dev": "tsdown --watch",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p scripts/tsconfig.json",
     "test": "vitest run",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -50,14 +55,21 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
+    "@ait-co/debug-console": "workspace:*",
     "@ait-co/internal-protocol": "workspace:*",
     "@biomejs/biome": "2.5.1",
     "@types/node": "^25.6.2",
     "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "@types/ws": "^8.18.0",
     "jsdom": "^29.0.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tsdown": "^0.22.0",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.2",
+    "vite": "^8.0.16",
     "vitest": "^4.1.4"
   },
   "keywords": [

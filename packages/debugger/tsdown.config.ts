@@ -85,7 +85,37 @@ export default defineConfig([
   },
   {
     ...common,
-    entry: { 'test-runner/config': 'src/test-runner/config.ts' },
+    // test-runner Node-side public API + helpers, mirroring devtools'
+    // tsdown.config.ts entry group. `runtime`/`bridge-stub`/`method-pace` are
+    // resolved at runtime via an absolute filesystem path (getRuntimePath /
+    // getBridgeStubPath / getMethodPacePath in bundle.ts) rather than a
+    // package subpath specifier — they MUST be emitted as their own dist/
+    // files, or check:test-runner-dist fails (devtools#676/#697/#740/#769).
+    // `capture`/`report` are deliberately react-free, heavy-graph-free leaf
+    // modules (devtools#696) kept in this esbuild-only entry group.
+    entry: {
+      'test-runner/config': 'src/test-runner/config.ts',
+      'test-runner/bundle': 'src/test-runner/bundle.ts',
+      'test-runner/runtime': 'src/test-runner/runtime.ts',
+      'test-runner/bridge-stub': 'src/test-runner/bridge-stub.ts',
+      'test-runner/method-pace': 'src/test-runner/method-pace.ts',
+      'test-runner/rpc': 'src/test-runner/rpc.ts',
+      'test-runner/relay-worker': 'src/test-runner/relay-worker.ts',
+      'test-runner/pool': 'src/test-runner/pool.ts',
+      'test-runner/task-graph': 'src/test-runner/task-graph.ts',
+      'test-runner/capture': 'src/test-runner/capture.ts',
+      'test-runner/report': 'src/test-runner/report.ts',
+    },
+  },
+  {
+    ...common,
+    // devtools#696: relay-factory is the shared env3 attach assembly. Its
+    // heavy graph (debug-server -> chii/cloudflared/ws; cell ->
+    // attach-orchestrator -> tools) is reached ONLY via dynamic import inside
+    // `open()` — kept as its own entry so a static react/heavy-graph leak is
+    // attributable to this one bundle (check:debug-surface-absent's #696
+    // check greps this exact file).
+    entry: { 'test-runner/relay-factory': 'src/test-runner/relay-factory.ts' },
   },
   {
     ...common,
