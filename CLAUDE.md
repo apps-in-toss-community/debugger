@@ -77,7 +77,7 @@ First publish is manual (npm's OIDC trusted-publishing flow cannot perform the *
 
 ## Toolchain
 
-Node 24, **pnpm 10.33.0** (`packageManager` pinned in every `package.json`), TypeScript strict. **Biome** for lint + format (`suspicious.noExplicitAny: error`) — no ESLint, no Prettier. Standard scripts across the workspace: `lint`, `lint:fix`, `format`, `typecheck`, `build`, `test`. At the root, `build`/`typecheck`/`test` fan out to every package via `pnpm -r`; `lint`/`format` run Biome once across the whole workspace (Biome does not need a per-package invocation).
+Node 24, **pnpm 11.17.0** (`packageManager` pinned in every `package.json`), TypeScript strict. **Biome** for lint + format (`suspicious.noExplicitAny: error`) — no ESLint, no Prettier. Standard scripts across the workspace: `lint`, `lint:fix`, `format`, `typecheck`, `build`, `test`. At the root, `build`/`typecheck`/`test` fan out to every package via `pnpm -r`; `lint`/`format` run Biome once across the whole workspace (Biome does not need a per-package invocation).
 
 Pre-commit hook is source-controlled under `.githooks/` and activated per-clone via:
 
