@@ -1,5 +1,9 @@
 packages:
   - 'packages/*'
 
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  "@sentry/cli": false
+  "@swc/core": false
+  cloudflared: false
+  esbuild: true
+  protobufjs: false
