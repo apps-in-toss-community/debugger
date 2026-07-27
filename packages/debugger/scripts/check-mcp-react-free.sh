@@ -3,7 +3,7 @@
 #
 # react/react-dom are devDependencies ONLY. The MCP daemon bundles
 # (dist/mcp/cli.js, dist/mcp/server.js) are what every MCP-only user runs via
-# `npx @ait-co/devtools devtools-mcp` — they must NEVER statically (or lazily)
+# `npx -p @ait-co/debugger debugger` — they must NEVER statically (or lazily)
 # import react/react-dom, or those frameworks get forced into the runtime
 # install graph of users who never render a browser UI.
 #

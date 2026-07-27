@@ -30,7 +30,7 @@ umbrella `.mcp.json`에 이미 배선돼 있다:
   "mcpServers": {
     "ait-devtools": {
       "command": "npx",
-      "args": ["-y", "@ait-co/devtools", "devtools-mcp"],
+      "args": ["-y", "-p", "@ait-co/debugger", "debugger"],
       "env": {
         "AIT_DEBUG_TOTP_SECRET": "<your-totp-secret>"
       }
@@ -39,7 +39,7 @@ umbrella `.mcp.json`에 이미 배선돼 있다:
 }
 ```
 
-Claude Code를 시작하면 MCP server가 자동 기동한다. `devtools-mcp`는 로컬 Chii relay를 OS 할당 포트로 띄우고 cloudflared quick tunnel(`*.trycloudflare.com`)을 발급한다.
+Claude Code를 시작하면 MCP server가 자동 기동한다. `debugger`는 로컬 Chii relay를 OS 할당 포트로 띄우고 cloudflared quick tunnel(`*.trycloudflare.com`)을 발급한다.
 
 > **반복 실행 시**: MCP server를 재시작하면 **tunnel URL이 교체된다**. 이전 세션의 QR/URL로는 relay에 붙을 수 없다 — 아래 "자주 깨지는 경우"를 참고.
 
