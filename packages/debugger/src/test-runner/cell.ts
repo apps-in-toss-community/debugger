@@ -1,5 +1,5 @@
 /**
- * Cell injection utility for the `devtools-test` CLI (issue #684 §4.1).
+ * Cell injection utility for the `debugger-test` CLI (issue #684 §4.1).
  *
  * Injects arbitrary globals into the page via `Runtime.evaluate` BEFORE the
  * first test bundle is injected. The injected values are session-global — one
@@ -330,7 +330,7 @@ export async function injectGlobals(
  * This is the same fire-and-forget spirit as the in-page console mount in
  * `src/in-app/attach.ts`.
  *
- * Call this ONLY on the manual debug paths (start_attach MCP, devtools-test
+ * Call this ONLY on the manual debug paths (start_attach MCP, debugger-test
  * CLI). Do NOT call on the `run_tests` auto-attach path — the badge
  * would contaminate screenshots, measure_safe_area probes, and DOM snapshots
  * taken during automated measurement runs.
@@ -353,6 +353,6 @@ export async function injectDebugIndicator(
     });
   } catch (err) {
     // Badge injection is informational UI — swallow and log; never propagate.
-    console.debug('[@ait-co/devtools] debug indicator inject skipped:', err);
+    console.debug('[@ait-co/debugger] debug indicator inject skipped:', err);
   }
 }

@@ -112,7 +112,7 @@ export const DEBUG_TOOL_DEFINITIONS = [
       'Also returns whether the cloudflared tunnel is up and the public wss relay URL. ' +
       'The `tunnel` field includes `droppedAt` (ISO timestamp or null/undefined): when non-null ' +
       'the tunnel has permanently dropped after 3 failed reissue attempts — restart the debug ' +
-      'server with `npx @ait-co/devtools devtools-mcp`. ' +
+      'server with `npx -p @ait-co/debugger debugger`. ' +
       'Each page entry includes a `lastSeenAt` ISO timestamp (last inbound CDP message from ' +
       'that target — useful to detect stale entries when the phone app backgrounded). ' +
       'The result also includes `crashDetectedAt` (ISO timestamp or null): when non-null, ' +
@@ -456,7 +456,7 @@ export const DEBUG_TOOL_DEFINITIONS = [
       'is attached, and a full diagnostic snapshot — in one call. Use this any time to answer ' +
       '"what mode am I in right now?" or "why is this not working?" without chaining tools. ' +
       'Fields: mcpVersion (MCP SDK version), ' +
-      'devtoolsVersion (@ait-co/devtools package version), tunnel (up/wssUrl/pid/startedAt), ' +
+      'devtoolsVersion (@ait-co/debugger package version), tunnel (up/wssUrl/pid/startedAt), ' +
       'pages (list_pages result + lastSeenAt stats), lastAttachAt, lastDetachAt, ' +
       'recentErrors (last N server-side errors, PII/secret redacted), ' +
       'authRejects ({count, lastAt} — relay TOTP 401 rejections, secret-free; count > 0 with empty pages ' +
@@ -1815,7 +1815,7 @@ export interface NextRecommendedAction {
 export interface DiagnosticsResult {
   /** `@modelcontextprotocol/sdk` package version string. */
   mcpVersion: string | null;
-  /** `@ait-co/devtools` package version string. */
+  /** `@ait-co/debugger` package version string. */
   devtoolsVersion: string | null;
   /** Tunnel state including lock-file pid/startedAt. */
   tunnel: DiagnosticsTunnelInfo;
@@ -2052,7 +2052,7 @@ export async function readMcpSdkVersion(): Promise<string | null> {
 }
 
 /**
- * Returns the `@ait-co/devtools` package version injected at build time via
+ * Returns the `@ait-co/debugger` package version injected at build time via
  * the `__VERSION__` define. Returns `null` when the global is absent (e.g. in
  * some test environments that skip the build step).
  */
@@ -2099,7 +2099,7 @@ export function computeNextRecommendedAction(
       tool: 'restart',
       reason:
         `tunnel permanently dropped at ${tunnel.droppedAt} after ${tunnel.reissueAttempts} reissue attempt(s) — ` +
-        'restart the MCP server (npx @ait-co/devtools devtools-mcp)',
+        'restart the MCP server (npx -p @ait-co/debugger debugger)',
     };
   }
 
@@ -2124,7 +2124,7 @@ export function computeNextRecommendedAction(
       // Rule 1 (relay env): tunnel must be up for relay to work — restart.
       return {
         tool: 'restart',
-        reason: 'tunnel not up — run `npx @ait-co/devtools devtools-mcp` to restart',
+        reason: 'tunnel not up — run `npx -p @ait-co/debugger debugger` to restart',
       };
     }
   }

@@ -1,5 +1,5 @@
 /**
- * Unit tests for the `devtools-test` CLI `main()` exit-code paths
+ * Unit tests for the `debugger-test` CLI `main()` exit-code paths
  * (issue #684 PR3; refactored to the shared relay factory in #696).
  *
  * The full attach flow needs a real phone + intoss-private:// URL, so it is
@@ -89,7 +89,7 @@ function passingRun() {
   };
 }
 
-describe('devtools-test main() exit codes', () => {
+describe('debugger-test main() exit codes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.exitCode = undefined;
@@ -188,7 +188,7 @@ describe('devtools-test main() exit codes', () => {
  * SECRET-HANDLING: appUrl is a synthetic placeholder tunnel host; a dedicated
  * test asserts it is NOT echoed to stderr by the CLI.
  */
-describe('devtools-test main() — env-2 launcher-attach (devtools#774)', () => {
+describe('debugger-test main() — env-2 launcher-attach (devtools#774)', () => {
   const APP_URL = 'https://synthetic-placeholder.trycloudflare.com';
 
   beforeEach(() => {
@@ -279,7 +279,7 @@ describe('resolveCellPlatform (devtools#774)', () => {
   });
 });
 
-describe('devtools-test main() — --cell-platform validation (devtools#774)', () => {
+describe('debugger-test main() — --cell-platform validation (devtools#774)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.exitCode = undefined;
@@ -1133,7 +1133,7 @@ describe('renderSummary — per-file failure exposure (fix #1, devtools#723)', (
 
     // FAIL line must appear BEFORE the aggregate totals line.
     const failIdx = summary.indexOf('FAIL camera.ait.test.ts:');
-    const totalsIdx = summary.indexOf('devtools-test:');
+    const totalsIdx = summary.indexOf('debugger-test:');
     expect(failIdx).toBeGreaterThanOrEqual(0);
     expect(totalsIdx).toBeGreaterThan(failIdx);
   });
@@ -1146,7 +1146,7 @@ describe('renderSummary — per-file failure exposure (fix #1, devtools#723)', (
 
     const summary = renderSummary(report);
 
-    expect(summary).toContain('devtools-test: 5 passed, 1 failed, 0 skipped');
+    expect(summary).toContain('debugger-test: 5 passed, 1 failed, 0 skipped');
   });
 
   it('all-passing report produces only OK lines and the aggregate', () => {

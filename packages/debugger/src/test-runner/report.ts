@@ -2,7 +2,7 @@
  * Runner-agnostic report serialisation for env3 test runs (devtools#696).
  *
  * Both env3 execution paths — the Vitest custom pool (`pool.ts`) and the
- * standalone `devtools-test` CLI (`cli.ts`) — call the same core
+ * standalone `debugger-test` CLI (`cli.ts`) — call the same core
  * `runTestFilesOverRelay` and so produce the same {@link RelayRunReport}. This
  * module is the single, runner-neutral place that turns that in-memory report
  * into a stable on-disk artifact so a 2.x run and a 3.0 run can be diffed

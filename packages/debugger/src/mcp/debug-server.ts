@@ -1,5 +1,5 @@
 /**
- * @ait-co/devtools debug-mode MCP server (stdio).
+ * @ait-co/debugger debug-mode MCP server (stdio).
  *
  * Lets an AI coding agent attach to a running mini-app (real Toss WebView, or a
  * browser in dev mode) and read its console/network/DOM/screenshot over CDP plus
@@ -55,7 +55,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 // Test-runner core (#646): run_tests reuses the same orchestration the
-// `devtools-test` CLI uses. These imports are react-free (node:* + esbuild),
+// `debugger-test` CLI uses. These imports are react-free (node:* + esbuild),
 // so they do not break the MCP-daemon react-free invariant.
 import { injectDebugIndicator, injectGlobals } from '../test-runner/cell.js';
 import { runWithConnection } from '../test-runner/cli.js';
@@ -1742,7 +1742,7 @@ export async function bootRelayFamily(options: BootRelayFamilyOptions = {}): Pro
         onPermanentDrop: (droppedAt) => {
           tunnelStatus = makeTunnelStatus(false, null, droppedAt, 3);
           logError('tunnel.down', {
-            msg: `tunnel permanently dropped (${droppedAt}). Restart: npx @ait-co/devtools devtools-mcp`,
+            msg: `tunnel permanently dropped (${droppedAt}). Restart: npx -p @ait-co/debugger debugger`,
           });
           // Wake open dashboard SSE clients immediately so the render gate
           // swaps the now-dead QR for the tunnel-down error state (issue #631).
@@ -2429,7 +2429,7 @@ export async function runDebugServer(options: RunDebugServerOptions = {}): Promi
   let lastAttachParts: AttachUrlParts | null = null;
 
   // 세션 생애주기 phase (#730) — daemon은 'shutdown' 전환 시에만 갱신한다.
-  // 'running'/'complete'는 CLI 전용(devtools-test)이라 daemon 경로는 사용하지 않는다.
+  // 'running'/'complete'는 CLI 전용(debugger-test)이라 daemon 경로는 사용하지 않는다.
   let currentPhase: DashboardState['phase'] = 'active';
 
   // getDashboardState 클로저 — qr-http-server dashboard에 현재 상태 전달.

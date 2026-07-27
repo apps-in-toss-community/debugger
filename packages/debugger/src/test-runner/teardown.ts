@@ -1,8 +1,8 @@
 /**
- * Bounded teardown orchestrator for the `devtools-test` CLI (devtools#755).
+ * Bounded teardown orchestrator for the `debugger-test` CLI (devtools#755).
  *
  * ## Symptom (run7~run10, 4 consecutive real-device reproductions)
- * The CLI writes the report + capture artifacts ("devtools-test: wrote report
+ * The CLI writes the report + capture artifacts ("debugger-test: wrote report
  * …", "wrote N capture file(s)") and the QR dashboard HTTP server goes down
  * (port no longer listening), but the Node process stays alive indefinitely —
  * a human had to `SIGTERM`/`pkill` it every run.

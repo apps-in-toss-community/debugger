@@ -1,5 +1,5 @@
 /**
- * Single debug session lock for the `devtools-mcp` debug server.
+ * Single debug session lock for the `debugger` debug server.
  *
  * At most one debug server process should run on a given machine at a time —
  * multiple concurrent instances create duplicate cloudflared tunnels, waste
@@ -315,7 +315,7 @@ export function acquireLock(options: AcquireLockOptions = {}): LockHandle {
           existing.wssUrl != null ? `wssUrl=${existing.wssUrl}` : 'wssUrl=(tunnel starting)';
         process.stderr.write(
           `[ait-debug] 기존 debug-mode 세션이 이미 실행 중 — PID=${existing.pid}, started ${existing.startedAt}, ${urlPart}\n` +
-            `[ait-debug] 회복: \`kill ${existing.pid}\` 또는 \`npx @ait-co/devtools devtools-mcp --force\`\n`,
+            `[ait-debug] 회복: \`kill ${existing.pid}\` 또는 \`npx -p @ait-co/debugger debugger --force\`\n`,
         );
         throw new ServerLockConflictError(existing.pid, existing.wssUrl, existing.startedAt);
       }

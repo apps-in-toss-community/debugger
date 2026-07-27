@@ -1,5 +1,5 @@
 /**
- * `devtools-test` CLI.
+ * `debugger-test` CLI.
  *
  * Shares test-file discovery with the `run_tests` MCP tool (`discoverTestFiles`)
  * and exposes `runWithConnection` — the pure run core that bundles, injects, and
@@ -26,10 +26,10 @@ import { armExitBackstop, runTeardownSteps } from './teardown.js';
 /* -------------------------------------------------------------------------- */
 
 const USAGE = `
-devtools-test — run mini-app tests on a real device WebView over the CDP relay
+debugger-test — run mini-app tests on a real device WebView over the CDP relay
 
 USAGE
-  devtools-test <glob> [<glob> ...] [options]
+  debugger-test <glob> [<glob> ...] [options]
 
 OPTIONS
   --scheme-url <url>      intoss-private:// URL from \`ait deploy --scheme-only\`
@@ -152,7 +152,7 @@ DESCRIPTION
   no separate MCP daemon is required.
 
 EXAMPLE (env 3 — intoss-private scheme)
-  devtools-test 'src/**/*.ait.test.ts' \\
+  debugger-test 'src/**/*.ait.test.ts' \\
     --scheme-url "intoss-private://..." \\
     --cell-sdk-line 3.x \\
     --cell-platform ios \\
@@ -160,7 +160,7 @@ EXAMPLE (env 3 — intoss-private scheme)
     --timeout 60000
 
 EXAMPLE (env 2 — AITC Sandbox PWA launcher)
-  devtools-test 'src/**/*.ait.test.ts' \\
+  debugger-test 'src/**/*.ait.test.ts' \\
     --attach-launcher \\
     --app-url "https://<subdomain>.trycloudflare.com" \\
     --cell-sdk-line 3.x \\
@@ -471,7 +471,7 @@ export function renderSummary(report: RelayRunReport): string {
 
   const { totals, duration } = report;
   lines.push(
-    `\ndevtools-test: ${totals.passed} passed, ${totals.failed} failed, ${totals.skipped} skipped (${duration}ms)`,
+    `\ndebugger-test: ${totals.passed} passed, ${totals.failed} failed, ${totals.skipped} skipped (${duration}ms)`,
   );
 
   return lines.join('\n');
@@ -590,7 +590,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
       allowPositionals: true,
     });
   } catch (e) {
-    process.stderr.write(`devtools-test: ${e instanceof Error ? e.message : String(e)}\n`);
+    process.stderr.write(`debugger-test: ${e instanceof Error ? e.message : String(e)}\n`);
     process.exitCode = 1;
     return;
   }
@@ -611,7 +611,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     typeof vals['attach-timeout'] === 'string' ? vals['attach-timeout'] : undefined,
   );
   if (typeof timeouts === 'string') {
-    process.stderr.write(`devtools-test: ${timeouts}\n`);
+    process.stderr.write(`debugger-test: ${timeouts}\n`);
     process.exitCode = 1;
     return;
   }
@@ -626,7 +626,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   if (attachLauncher) {
     if (appUrl === '') {
       process.stderr.write(
-        `devtools-test: --app-url is required with --attach-launcher (env 2).\n` +
+        `debugger-test: --app-url is required with --attach-launcher (env 2).\n` +
           `  Pass the consumer dev server's tunnel URL (e.g. the HTTP *.trycloudflare.com\n` +
           `  URL printed by \`pnpm dev:phone:cdp\`). --scheme-url is not used in this mode.\n`,
       );
@@ -635,7 +635,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     }
   } else if (schemeUrl === '') {
     process.stderr.write(
-      `devtools-test: --scheme-url is required for standalone relay attach.\n` +
+      `debugger-test: --scheme-url is required for standalone relay attach.\n` +
         `  Pass the intoss-private:// URL from \`ait deploy --scheme-only\`.\n` +
         `  (For env 2 / AITC Sandbox PWA, use --attach-launcher --app-url <tunnel-url> instead.)\n`,
     );
@@ -651,7 +651,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     typeof vals['dashboard-port'] === 'string' ? vals['dashboard-port'] : undefined,
   );
   if (typeof dashboardPort === 'string') {
-    process.stderr.write(`devtools-test: ${dashboardPort}\n`);
+    process.stderr.write(`debugger-test: ${dashboardPort}\n`);
     process.exitCode = 1;
     return;
   }
@@ -660,7 +660,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     process.env.AIT_PACE,
   );
   if (typeof paceMs === 'string') {
-    process.stderr.write(`devtools-test: ${paceMs}\n`);
+    process.stderr.write(`debugger-test: ${paceMs}\n`);
     process.exitCode = 1;
     return;
   }
@@ -683,7 +683,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
       : process.env.AIT_CELL_PLATFORM,
   );
   if (!cellPlatformResult.ok) {
-    process.stderr.write(`devtools-test: ${cellPlatformResult.error}\n`);
+    process.stderr.write(`debugger-test: ${cellPlatformResult.error}\n`);
     process.exitCode = 1;
     return;
   }
@@ -705,7 +705,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     cell.sdkLine,
   );
   if (typeof paceMethodMs === 'string') {
-    process.stderr.write(`devtools-test: ${paceMethodMs}\n`);
+    process.stderr.write(`debugger-test: ${paceMethodMs}\n`);
     process.exitCode = 1;
     return;
   }
@@ -713,7 +713,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   // ── Step 2: discover test files ───────────────────────────────────────────
   const globs = parsed.positionals;
   if (globs.length === 0) {
-    process.stderr.write(`devtools-test: at least one glob pattern is required\n`);
+    process.stderr.write(`debugger-test: at least one glob pattern is required\n`);
     process.stdout.write(USAGE);
     process.exitCode = 1;
     return;
@@ -727,7 +727,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     includeManual: manualBlocking,
   });
   if (discovered.length === 0) {
-    process.stderr.write(`devtools-test: no test files matched ${globs.join(', ')}\n`);
+    process.stderr.write(`debugger-test: no test files matched ${globs.join(', ')}\n`);
     process.exitCode = 1;
     return;
   }
@@ -738,8 +738,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   const manualFileSet = new Set(manual);
   process.stderr.write(
     manualBlocking && manual.length > 0
-      ? `devtools-test: found ${regular.length} regular + ${manual.length} manual (${MANUAL_TEST_SUFFIX}) test file(s)\n`
-      : `devtools-test: found ${files.length} test file(s)\n`,
+      ? `debugger-test: found ${regular.length} regular + ${manual.length} manual (${MANUAL_TEST_SUFFIX}) test file(s)\n`
+      : `debugger-test: found ${files.length} test file(s)\n`,
   );
 
   // ── Step 3: open the relay connection via the shared factory ──────────────
@@ -749,19 +749,19 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   // QR block on non-interactive stdout (it encodes the relay wss + TOTP code).
   // SECRET-HANDLING: scheme_url / wss / TOTP are never logged by the factory.
   if (hasCell) {
-    process.stderr.write(`devtools-test: injecting __AIT_CELL__ = ${JSON.stringify(cell)}\n`);
+    process.stderr.write(`debugger-test: injecting __AIT_CELL__ = ${JSON.stringify(cell)}\n`);
   }
   if (stubBlocking) {
     process.stderr.write(
-      'devtools-test: --stub-blocking enabled — blocking-UI calls in manual-tagged ' +
+      'debugger-test: --stub-blocking enabled — blocking-UI calls in manual-tagged ' +
         'files will be answered from fixtures (devtools#740), not forwarded to native UI\n',
     );
   }
   if (paceMs > 0) {
-    process.stderr.write(`devtools-test: --pace ${paceMs}ms enabled (devtools#767)\n`);
+    process.stderr.write(`debugger-test: --pace ${paceMs}ms enabled (devtools#767)\n`);
   }
   if (paceMethodMs > 0) {
-    process.stderr.write(`devtools-test: --pace-method ${paceMethodMs}ms enabled (devtools#769)\n`);
+    process.stderr.write(`debugger-test: --pace-method ${paceMethodMs}ms enabled (devtools#769)\n`);
   }
   const factory = createRelayConnectionFactory({
     schemeUrl,
@@ -797,7 +797,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   try {
     connection = await factory.open();
   } catch (e) {
-    process.stderr.write(`devtools-test: ${e instanceof Error ? e.message : String(e)}\n`);
+    process.stderr.write(`debugger-test: ${e instanceof Error ? e.message : String(e)}\n`);
     process.exitCode = 1;
     return;
   }
@@ -862,7 +862,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
           projectRoot,
         });
         for (const reportPath of reportPaths) {
-          process.stderr.write(`devtools-test: wrote report ${reportPath}\n`);
+          process.stderr.write(`debugger-test: wrote report ${reportPath}\n`);
         }
         const capturePaths = await writeCaptureArtifacts(
           report.captures,
@@ -870,12 +870,12 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
           cell,
         );
         if (capturePaths.length > 0) {
-          process.stderr.write(`devtools-test: wrote ${capturePaths.length} capture file(s)\n`);
+          process.stderr.write(`debugger-test: wrote ${capturePaths.length} capture file(s)\n`);
         }
       } catch (e) {
         // Artifact write failure must not mask the test result.
         process.stderr.write(
-          `devtools-test: failed to write report artifacts: ${e instanceof Error ? e.message : String(e)}\n`,
+          `debugger-test: failed to write report artifacts: ${e instanceof Error ? e.message : String(e)}\n`,
         );
       }
     }
