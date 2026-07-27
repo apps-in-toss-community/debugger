@@ -25,10 +25,10 @@ pnpm add -D @ait-co/debugger        # MCP daemon · CDP relay · test-runner · 
 pnpm add @ait-co/debug-console      # on-device attach + eruda console (the only package safe to ship)
 ```
 
-You can also run the daemon directly via `npx`:
+You can also run it directly via `npx` without installing. The package name and the bin name differ, so call it in `-p` form:
 
 ```sh
-npx @ait-co/debugger debugger-test
+npx -p @ait-co/debugger debugger
 ```
 
 ## Layout
@@ -39,6 +39,8 @@ packages/
   debug-console/        @ait-co/debug-console — exports: . and ./auto (no bins)
   internal-protocol/    private, never published — device<->host protocol source shared by both packages
 ```
+
+For per-package usage, exports, and security scope, see [`packages/debugger/README.en.md`](./packages/debugger/README.en.md) · [`packages/debug-console/README.en.md`](./packages/debug-console/README.en.md).
 
 There are **zero required dependency edges** between the three packages — any cross-package reference is always declared as an optional peer. See [`CLAUDE.md`](./CLAUDE.md) for the full invariants and secret-handling rules.
 

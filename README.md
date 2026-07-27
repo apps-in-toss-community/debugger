@@ -25,10 +25,10 @@ pnpm add -D @ait-co/debugger        # MCP 데몬 · CDP relay · test-runner · 
 pnpm add @ait-co/debug-console      # on-device attach + eruda 콘솔 (프로덕션 번들에 들어갈 수 있는 유일한 패키지)
 ```
 
-`npx`로 데몬만 바로 실행할 수도 있습니다:
+설치 없이 `npx`로 바로 실행할 수도 있습니다. 패키지 이름과 bin 이름이 다르므로 `-p` 형태로 호출합니다:
 
 ```sh
-npx @ait-co/debugger debugger-test
+npx -p @ait-co/debugger debugger
 ```
 
 ## 구조
@@ -39,6 +39,8 @@ packages/
   debug-console/        @ait-co/debug-console — exports: . 와 ./auto (bin 없음)
   internal-protocol/    비공개, 미publish     — 두 패키지가 공유하는 device<->host 프로토콜 원본
 ```
+
+각 패키지의 상세 사용법 · exports · 보안 스코프는 [`packages/debugger/README.md`](./packages/debugger/README.md) · [`packages/debug-console/README.md`](./packages/debug-console/README.md)를 참조하세요.
 
 세 패키지 사이에 **필수 의존 edge는 0개**다 — 교차 패키지 참조가 필요하면 항상 optional peer로만 선언한다. 자세한 불변식과 시크릿 취급 규칙은 [`CLAUDE.md`](./CLAUDE.md)를 참조하세요.
 
