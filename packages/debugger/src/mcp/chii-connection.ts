@@ -445,7 +445,7 @@ export class ChiiCdpConnection implements CdpConnection {
     }
 
     const wsBase = this.relayBaseUrl.replace(/^http/, 'ws');
-    const clientId = `devtools-mcp-${Date.now()}`;
+    const clientId = `debugger-${Date.now()}`;
     let clientUrl = `${wsBase}/client/${clientId}?target=${encodeURIComponent(target.id)}`;
     // Append a freshly-minted TOTP code so the relay's WS upgrade gate
     // (chii-relay.ts verifyAuth) accepts this /client upgrade. Minted per-connect

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Build-output guard for the `devtools-mcp` bin shebang.
+ * Build-output guard for the `debugger` bin shebang.
  *
  * The shebang is injected once by the tsdown `banner` (see tsdown.config.ts).
  * If the entry source ALSO carries its own `#!/usr/bin/env node`, the build

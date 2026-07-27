@@ -1,10 +1,10 @@
 /**
- * Test-file discovery shared by the `devtools-test` CLI and the `run_tests`
+ * Test-file discovery shared by the `debugger-test` CLI and the `run_tests`
  * MCP tool, so both expand glob patterns with identical semantics.
  *
  * Uses Node's built-in `fs/promises` `glob` (Node 22+) — no extra dependency,
  * which keeps the MCP daemon install graph lean (a plain glob lib would land in
- * the `npx … devtools-mcp` path for no benefit).
+ * the `npx -p @ait-co/debugger debugger` path for no benefit).
  *
  * Pure Node IO only (`node:fs/promises` + `node:path`) — react-free, so it is
  * safe to import from the MCP daemon graph.

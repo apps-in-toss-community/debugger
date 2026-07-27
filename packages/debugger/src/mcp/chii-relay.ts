@@ -612,7 +612,7 @@ export async function startChiiRelay(options: StartChiiRelayOptions = {}): Promi
         // 'upgrade'로 넘어가면 Node의 HTTP 서버 커넥션 트래킹에서 빠져나가,
         // `httpServer.close()`(그리고 `closeAllConnections()`도)가 더 이상
         // 그 소켓을 보지 못한다 — 열려 있는 CDP WS 연결이 하나라도 있으면
-        // close 콜백이 영원히 안 불려 devtools-test CLI가 종료되지 않는다
+        // close 콜백이 영원히 안 불려 debugger-test CLI가 종료되지 않는다
         // (run7~10 재현). chii의 `_wss.clients`(위에서 이미 keepalive ping에
         // 쓰는 것과 같은 Set)를 순회해 명시적으로 terminate한 뒤 close한다.
         // capturedChiiWss가 null(캡처 실패/keepalive 비활성)이어도 안전 —

@@ -1,5 +1,5 @@
 /**
- * @ait-co/devtools dev-mode MCP server (stdio).
+ * @ait-co/debugger dev-mode MCP server (stdio).
  *
  * Exposes the live browser mock state from a running Vite dev server to AI
  * coding agents via the Model Context Protocol (MCP).
@@ -40,7 +40,7 @@
  *                   explicit tier-filter error explaining that CDP is unavailable
  *                   in dev-mode and pointing to `--mode=local` or `--mode=debug`.
  *
- * This module is reached via the `devtools-mcp --mode=dev` CLI entry (see
+ * This module is reached via the `debugger --mode=dev` CLI entry (see
  * `cli.ts`); the default (no flag) bin mode is the debug-mode CDP/Chii server.
  *
  * Usage (in your MCP client config, e.g. Claude Desktop):
@@ -48,7 +48,7 @@
  *     "mcpServers": {
  *       "ait-devtools": {
  *         "command": "pnpm",
- *         "args": ["exec", "devtools-mcp", "--mode=dev"],
+ *         "args": ["exec", "debugger", "--mode=dev"],
  *         "env": { "AIT_DEVTOOLS_URL": "http://localhost:5173" }
  *       }
  *     }
@@ -73,8 +73,8 @@ import {
 /** Error message prefix for CDP-dependent tools called in dev-mode. */
 const CDP_UNAVAILABLE_IN_DEV_MODE =
   'dev-mode에서는 CDP 연결이 없어 이 도구를 사용할 수 없습니다. ' +
-  '실기기 또는 로컬 Chromium에 붙이려면 `devtools-mcp --mode=local` 또는 ' +
-  '`devtools-mcp` (debug 모드 기본)로 전환하세요.';
+  '실기기 또는 로컬 Chromium에 붙이려면 `debugger --mode=local` 또는 ' +
+  '`debugger` (debug 모드 기본)로 전환하세요.';
 
 /**
  * Tool descriptors served by the dev-mode server.
@@ -134,7 +134,7 @@ const DEV_TOOL_DEFINITIONS = [
       'dev-mode: returns the Vite dev server URL as a single-entry page list. ' +
       'No CDP relay is involved — `tunnel.up` is always false and `devMode: true` marks ' +
       'this as a shim result. Call this first to confirm the dev server is reachable. ' +
-      'In debug mode (`devtools-mcp` / `--mode=local`) this returns real attached pages.',
+      'In debug mode (`debugger` / `--mode=local`) this returns real attached pages.',
     inputSchema: { type: 'object', properties: {}, required: [] },
     availableIn: 'both' as ToolAvailability,
   },
@@ -531,7 +531,7 @@ export function createDevServer(deps: CreateDevServerDeps = {}): Server {
         'relay',
         'mock',
         'dev-mode — Vite HTTP endpoint, no CDP/relay connection. ' +
-          '`--mode=debug` (または `devtools-mcp` without --mode) + MCP_ENV=relay로 재시작하세요.',
+          '`--mode=debug` (または `debugger` without --mode) + MCP_ENV=relay로 재시작하세요.',
       );
     }
 

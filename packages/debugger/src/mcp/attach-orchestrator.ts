@@ -1,5 +1,5 @@
 /**
- * @ait-co/devtools attach orchestrator (issue #684 §2).
+ * @ait-co/debugger attach orchestrator (issue #684 §2).
  *
  * The relay-attach orchestration — minting a fresh-TOTP attach URL, validating
  * an env's attach preconditions, rendering the QR (dashboard or text), opening
@@ -15,7 +15,7 @@
  *
  *   - the MCP `start_attach` CallTool handler (`debug-server.ts`) — assembles
  *     `attachDeps` from its own closure variables and calls these functions;
- *   - (forthcoming, PR3) the `devtools-test` CLI — boots a single relay family
+ *   - (forthcoming, PR3) the `debugger-test` CLI — boots a single relay family
  *     and assembles `attachDeps` without a dashboard/SSE callback.
  *
  * The orchestrator imports NEITHER adapter (zero reverse dependency). It pulls
@@ -626,7 +626,7 @@ export async function renderAndMaybeWait(
   // devtools#766: proactive one-line notice, appended to the shared header so
   // it rides along every render path (headless / browser-opened / browser-
   // open-failed / no-http-server) and both callers (the `start_attach` MCP
-  // tool here in debug-server.ts, and the devtools-test CLI's runner-terminal
+  // tool here in debug-server.ts, and the debugger-test CLI's runner-terminal
   // output via relay-factory.ts's onQrContent). Real-device observation
   // (2026-07-08, 46/8/6 partial run vs. 78/0/13 clean full run) confirmed the
   // root cause is the human backgrounding the app mid-run, not the SDK or the

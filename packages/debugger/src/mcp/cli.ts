@@ -1,5 +1,5 @@
 /**
- * `devtools-mcp` bin entry.
+ * `debugger` bin entry.
  *
  * Single bin, two modes selected by `--mode` and one target selected by
  * `--target`:
@@ -130,8 +130,8 @@ async function main(): Promise<void> {
  * bin shim that's the symlink in `node_modules/.bin/` (or a wrapper), whereas
  * `import.meta.url` resolves to the realpath inside the package. Comparing
  * the two raw paths gives a false negative on every install that goes through
- * a bin shim — exactly the dominant path for `npx -y @ait-co/devtools
- * devtools-mcp`. Resolve `argv[1]` to its realpath before comparing.
+ * a bin shim — exactly the dominant path for `npx -y -p @ait-co/debugger
+ * debugger`. Resolve `argv[1]` to its realpath before comparing.
  */
 function isEntrypoint(): boolean {
   const entry = argv[1];
@@ -146,7 +146,7 @@ function isEntrypoint(): boolean {
 if (isEntrypoint()) {
   main().catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`[devtools-mcp] fatal: ${message}\n`);
+    process.stderr.write(`[debugger] fatal: ${message}\n`);
     process.exitCode = 1;
   });
 }

@@ -418,8 +418,8 @@ function userFactoryPlugin(absPath: string): esbuild.Plugin {
  * fully self-contained module with no further page-side deps of its own.
  *
  * Rolldown code-splitting duplicates this bundling logic into shared chunks
- * emitted at ARBITRARY dist depths: the `devtools-test` CLI pulls it from
- * dist/test-runner/bundle.js (dir = dist/test-runner/), while the `devtools-mcp`
+ * emitted at ARBITRARY dist depths: the `debugger-test` CLI pulls it from
+ * dist/test-runner/bundle.js (dir = dist/test-runner/), while the `debugger`
  * daemon (dist/mcp/cli.js) pulls it through a ROOT chunk
  * (dist/debug-server-<hash>.js, dir = dist/). A fixed `..`-hop candidate list
  * is therefore wrong from at least one chunk — the live #697 regression.
@@ -436,7 +436,7 @@ function userFactoryPlugin(absPath: string): esbuild.Plugin {
  * An ABSOLUTE path is returned deliberately: esbuild loads it as a literal file
  * read, bypassing Node module resolution entirely, so this works identically in
  * the npx-daemon context (its own dist tree) and the consumer-CLI context
- * (the mini-app's installed @ait-co/devtools dist) — neither needs the package
+ * (the mini-app's installed @ait-co/debugger dist) — neither needs the package
  * to be node-resolvable from the caller.
  *
  * @param moduleName - The leaf module's basename without extension, e.g.

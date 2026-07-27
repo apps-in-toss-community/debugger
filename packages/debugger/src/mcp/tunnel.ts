@@ -383,7 +383,7 @@ export function startTunnelHealthProbe(
         const droppedAt = new Date().toISOString();
         log(
           `[ait-debug] tunnel permanently dropped after ${MAX_REISSUE_ATTEMPTS} reissue attempts — ` +
-            'restart the debug server to continue (npx @ait-co/devtools devtools-mcp).\n',
+            'restart the debug server to continue (npx -p @ait-co/debugger debugger).\n',
         );
         onPermanentDrop(droppedAt);
       }

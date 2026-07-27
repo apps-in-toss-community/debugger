@@ -4,14 +4,14 @@
  * The Vitest pool (`pool.ts`) takes a {@link RelayConnectionFactory} that knows
  * how to `open()` a live CDP relay connection (boot relay → QR → phone scan →
  * cell inject → enableDomains) and `close()` it. Before this module that exact
- * assembly lived only inside the `devtools-test` CLI's `main()`; the standalone
+ * assembly lived only inside the `debugger-test` CLI's `main()`; the standalone
  * CLI and the Vitest pool would otherwise each hand-roll it and drift.
  *
  * This is the single source of that assembly. `cli.ts` is refactored to call
  * `createRelayConnectionFactory(...).open()`, and `definePhoneVitestConfig`
  * (config.ts) exposes it so a downstream `vitest.config.ts` can wire the pool:
  *
- *   import { createRelayConnectionFactory } from '@ait-co/devtools/test-runner';
+ *   import { createRelayConnectionFactory } from '@ait-co/debugger/test-runner';
  *   const connection = createRelayConnectionFactory({
  *     schemeUrl,
  *     cell,
@@ -26,7 +26,7 @@
  *
  * The heavy boot graph (chii relay, cloudflared, ws, debug-server) is pulled via
  * DYNAMIC import inside `open()` — so merely importing this module (or the
- * `@ait-co/devtools/test-runner` barrel) does NOT statically drag that graph in.
+ * `@ait-co/debugger/test-runner` barrel) does NOT statically drag that graph in.
  *
  * SECRET-HANDLING: relay wss URLs, scheme URLs, and the TOTP secret/code are
  * never logged. `open()` reads the project-local `.ait_relay` secret read-only
@@ -42,7 +42,7 @@ import type { RelayConnectionFactory } from './pool.js';
 
 // NOTE: every value import below is a DYNAMIC import inside `open()`. This module
 // keeps ONLY type-level static imports so that re-exporting it from the
-// `@ait-co/devtools/test-runner` barrel (config.ts) does NOT statically drag the
+// `@ait-co/debugger/test-runner` barrel (config.ts) does NOT statically drag the
 // heavy MCP graph (cell.ts → attach-orchestrator.ts → tools.ts → server-lock,
 // plus chii/cloudflared via debug-server) onto that Node-config entry.
 
@@ -156,7 +156,7 @@ export interface RelayConnectionFactoryOptions {
    * (which encodes the relay wss + TOTP `at=` code) and the attach JSON block.
    * Making the hook mandatory means the factory never falls back to printing
    * them itself — a downstream `vitest.config.ts` consumer that wires this via
-   * the `@ait-co/devtools/test-runner` barrel is forced to make an explicit
+   * the `@ait-co/debugger/test-runner` barrel is forced to make an explicit
    * stdout decision rather than silently leaking the secret-bearing block.
    *
    * SECRET-HANDLING: when a non-interactive caller is detected the hook MUST
@@ -388,7 +388,7 @@ export function createRelayConnectionFactory(
 
         // Print the loopback dashboard URL to stderr — it carries no secrets
         // (TOTP codes and relay wss live only in the in-memory HTTP response).
-        process.stderr.write(`devtools-test: QR dashboard: http://127.0.0.1:${qrServer.port}/\n`);
+        process.stderr.write(`debugger-test: QR dashboard: http://127.0.0.1:${qrServer.port}/\n`);
       } catch {
         // startQrHttpServer failed (e.g. port conflict, import error). Fall back
         // to the existing text-QR path by leaving qrHttpServer: undefined.
