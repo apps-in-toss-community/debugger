@@ -14,6 +14,11 @@
  * the same relative layout tunnel.ts had against devtools' `src/mcp/`.
  * Renaming this module (e.g. splitting further, dropping the `dev-bridge`
  * grouping) is out of scope here — see this repo's issue #3 (D3).
+ *
+ * The vendored slice below ends at `startTunnelDashboard`. `./cdp-relay.js`,
+ * re-exported at the bottom of this file, is NOT vendored — it is the relay
+ * bootstrap composition written for this package (issue #30), kept in its own
+ * module so this one stays a faithful copy of its origin.
  */
 
 /**
@@ -191,3 +196,20 @@ export async function startTunnelDashboard(
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// End of the vendored slice.
+// ---------------------------------------------------------------------------
+
+/**
+ * env-2 CDP relay bootstrap (issue #30) — the other half of the `/dev-bridge`
+ * surface. Kept in `./cdp-relay.js` because it is new code, not a vendored
+ * copy, and re-exported here so `/dev-bridge` stays a single entry point.
+ */
+export {
+  type DevServerCdpRelay,
+  type DevServerRelayTunnel,
+  type RelayAuthRejectEvent,
+  type StartDevServerCdpRelayOptions,
+  startDevServerCdpRelay,
+} from './cdp-relay.js';
