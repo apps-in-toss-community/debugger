@@ -11,7 +11,7 @@
 #
 # Three checks:
 #   1. MCP daemon bundles (dist/mcp/*.js) contain no `eruda` — those run via
-#      `npx @ait-co/devtools devtools-mcp` and must never pull a browser console
+#      `npx -p @ait-co/debugger debugger` and must never pull a browser console
 #      into the install/runtime graph (mirrors check-mcp-react-free.sh).
 #   2. RELEASE fixture build (AIT_DEBUG_BUILD unset, NODE_ENV=production,
 #      minify ON) contains no debug-surface sentinels — proves DCE works.

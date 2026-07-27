@@ -14,7 +14,7 @@
 # Rolldown code-splitting hoists the bundling logic (getRuntimePath) into
 # shared chunks emitted at the dist/ ROOT (e.g. debug-server-<hash>.js, pulled
 # by dist/mcp/cli.js). The old fixed 3-candidate list assumed dist/test-runner/
-# depth and missed from dist/ root — every run_tests / devtools-test call failed
+# depth and missed from dist/ root — every run_tests / debugger-test call failed
 # with esbuild "Could not resolve". The new depth-robust probe ascends from
 # import.meta.url's dir until it finds test-runner/runtime.js. This guard
 # discovers all carrier chunks and verifies the resolver lands on
@@ -162,7 +162,7 @@ fi
 # --- #711: bin calls main() guard -------------------------------------------
 # dist/test-runner/bin.js must contain an unconditional main() call. If Rolldown
 # ever reduces the bin back to a re-export wrapper (e.g. because bin.ts gains
-# an export), the main() call disappears and devtools-test / pnpm test:env3
+# an export), the main() call disappears and debugger-test / pnpm test:env3
 # silently exits 0 — the original #711 regression. This grep catches that.
 BIN_FILE="dist/test-runner/bin.js"
 if [[ ! -f "$BIN_FILE" ]]; then
