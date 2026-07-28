@@ -1141,7 +1141,7 @@ export async function startQrHttpServer(
     //   - getDirectInspectorUrl 미주입 (relay 연결 없는 server mode) → 503.
     //
     // /inspector: dashboard의 "디버그 툴 열기" 링크가 이 URL을 가리키며, qrServer.inspectorStableUrl로 노출된다.
-    // /devtools/: `/ait debug` 문서·가이드에서 직접 참조 가능한 고정 경로 (issue #248).
+    // /devtools/: `/ait:debug` 문서·가이드에서 직접 참조 가능한 고정 경로 (issue #248).
     //   이 경로가 존재함으로써 사용자가 dashboard를 열지 않고도 직접 DevTools UI에 접근할 수 있다.
     //
     // getDashboardState().inspectorUrl(= /inspector 자기 자신)을 쓰면 무한 루프 → getDirectInspectorUrl로 분리.
