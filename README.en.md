@@ -8,7 +8,7 @@
 
 Remote-debugging infrastructure for Apps in Toss mini-apps — a pnpm workspace holding the MCP debugging daemon, on-device CDP relay, test runner, and on-device console.
 
-`@ait-co/devtools` grew to hold 8 feature surfaces (mock · panel · unplugin · phone preview · on-device debug · remote CDP · MCP server · test runner · in-app console) in a single package. It is being split into **3 packages across 2 repos**, and this repo carries the debug/observability half. The explicit motivation for the split is a **security scope**: "what can end up in a production bundle?" should be answerable by reading one `package.json` with exactly one dependency (`eruda`).
+`@ait-co/devtools` grew to hold 8 feature surfaces (mock · panel · unplugin · phone preview · on-device debug · remote CDP · MCP server · test runner · in-app console) in a single package. It has been split into **3 packages across 2 repos**, and this repo carries the debug/observability half. The explicit motivation for the split is a **security scope**: "what can end up in a production bundle?" should be answerable by reading one `package.json` with exactly one dependency (`eruda`).
 
 | Package | Repo | Contents | Consumed as |
 |---|---|---|---|
@@ -16,7 +16,7 @@ Remote-debugging infrastructure for Apps in Toss mini-apps — a pnpm workspace 
 | `@ait-co/debugger` | here | MCP daemon · CDP relay · test-runner · dev-bridge | devDependency / `npx` |
 | `@ait-co/debug-console` | here | on-device attach · eruda console | **the only package that can enter an app bundle** |
 
-> This repo is currently in early scaffolding stage. The real MCP daemon, CDP relay, test-runner, and on-device console implementations arrive via a follow-up vendor commit from `devtools`; for now only the workspace structure and the build/lint/test pipeline are in place.
+The split is done — the MCP daemon, CDP relay, test runner, and on-device console implementations all live in this workspace, and both packages ship on npm. `@ait-co/devtools` handed over its debug surface in 0.2.0 and now holds only mock, panel, and unplugin.
 
 ## Install
 
@@ -43,6 +43,8 @@ packages/
 For per-package usage, exports, and security scope, see [`packages/debugger/README.en.md`](./packages/debugger/README.en.md) · [`packages/debug-console/README.en.md`](./packages/debug-console/README.en.md).
 
 There are **zero required dependency edges** between the three packages — any cross-package reference is always declared as an optional peer. See [`CLAUDE.md`](./CLAUDE.md) for the full invariants and secret-handling rules.
+
+Ten issues moved here from `devtools` during the split and were renumbered; the mapping lives in [`docs/issue-transfer-map.md`](./docs/issue-transfer-map.md) (written in Korean) — look there when you hit an old `devtools#N` reference.
 
 ## Development
 
