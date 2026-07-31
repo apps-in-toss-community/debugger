@@ -8,7 +8,7 @@
 
 앱인토스(Apps in Toss) 미니앱의 원격 디버깅 인프라 — MCP 디버깅 데몬, on-device CDP relay, test-runner, on-device 콘솔을 담는 pnpm workspace.
 
-`@ait-co/devtools`가 8개 기능 표면(mock·panel·unplugin·phone preview·on-device debug·remote CDP·MCP server·test runner·in-app console)을 한 패키지에 담고 있었는데, 이를 **3 패키지 / 2 repo**로 쪼개는 중이며 이 repo가 debug·관측 쪽 절반을 담당한다. 분리의 명시적 동기는 **보안 스코프**다 — "무엇이 프로덕션 번들에 들어갈 수 있는가"가 `package.json` 한 장(dep 1개: `eruda`)으로 답해지도록 만든다.
+`@ait-co/devtools`가 8개 기능 표면(mock·panel·unplugin·phone preview·on-device debug·remote CDP·MCP server·test runner·in-app console)을 한 패키지에 담고 있었는데, 이를 **3 패키지 / 2 repo**로 쪼갰고 이 repo가 debug·관측 쪽 절반을 담당한다. 분리의 명시적 동기는 **보안 스코프**다 — "무엇이 프로덕션 번들에 들어갈 수 있는가"가 `package.json` 한 장(dep 1개: `eruda`)으로 답해지도록 만든다.
 
 | 패키지 | repo | 내용 | 소비 형태 |
 |---|---|---|---|
@@ -16,7 +16,7 @@
 | `@ait-co/debugger` | 여기 | MCP 데몬 · CDP relay · test-runner · dev-bridge | devDependency / `npx` |
 | `@ait-co/debug-console` | 여기 | on-device attach · eruda 콘솔 | **앱 번들에 들어갈 수 있는 유일한 패키지** |
 
-> 현재 초기 스캐폴딩 단계입니다. 실제 MCP 데몬·CDP relay·test-runner·on-device 콘솔 구현은 `devtools`로부터의 후속 vendor 커밋으로 채워질 예정이며, 지금은 workspace 구조 + 빌드/린트/테스트 파이프라인만 갖춰져 있습니다.
+분리는 완료됐다 — MCP 데몬·CDP relay·test-runner·on-device 콘솔 구현이 모두 이 workspace에 들어와 있고, 두 패키지는 npm에 출하 중이다. `@ait-co/devtools`는 0.2.0에서 debug 표면을 넘겨준 뒤 mock·panel·unplugin만 담는다.
 
 ## 설치
 
@@ -43,6 +43,8 @@ packages/
 각 패키지의 상세 사용법 · exports · 보안 스코프는 [`packages/debugger/README.md`](./packages/debugger/README.md) · [`packages/debug-console/README.md`](./packages/debug-console/README.md)를 참조하세요.
 
 세 패키지 사이에 **필수 의존 edge는 0개**다 — 교차 패키지 참조가 필요하면 항상 optional peer로만 선언한다. 자세한 불변식과 시크릿 취급 규칙은 [`CLAUDE.md`](./CLAUDE.md)를 참조하세요.
+
+분리 때 `devtools`에서 이관되며 번호가 바뀐 이슈 10건의 매핑은 [`docs/issue-transfer-map.md`](./docs/issue-transfer-map.md)에 있습니다 — 옛 `devtools#N` 참조를 만나면 여기서 찾으세요.
 
 ## 개발
 
