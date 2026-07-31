@@ -91,7 +91,7 @@ TOTP 시크릿·코드 값은 QR 페이지에 표시되지 않는다(SECRET-HAND
 | Layer | 역할 | 실패 원인 |
 |---|---|---|
 | A | `__DEBUG_BUILD__` 플래그 확인 | dogfood 빌드가 아닌 경우 |
-| B | `@ait-co/devtools/in-app` 주입 여부 | in-app import 누락 |
+| B | `@ait-co/debug-console` 주입 여부 | attach import 누락 |
 | C | relay TOTP 인증 | `AIT_DEBUG_TOTP_SECRET` 미설정 또는 TOTP 코드 만료 |
 
 모든 gate 통과 후 Chii `target.js`가 주입되고 relay에 WebSocket으로 연결된다.
