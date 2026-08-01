@@ -7,6 +7,8 @@
 
 앱인토스(Apps in Toss) 미니앱을 위한 원격 디버깅 인프라 — MCP 디버깅 데몬, on-device CDP relay, test runner, dev bridge를 한 패키지에 담는다. **devDependency / `npx` 전용이며, 이 패키지의 코드는 프로덕션 번들에 절대 들어가지 않는다.** 루트(`.`) export가 없다는 사실이 그 경계를 그대로 드러낸다 — 임의로 앱 코드에 import할 수 있는 표면 자체가 존재하지 않는다.
 
+이 프로젝트는 더 이상 유지보수되지 않는다. repo는 archive되어 read-only가 되지만 소스와 이슈 기록은 GitHub에 그대로 남고, 이 패키지도 npm에서 계속 설치할 수 있다 — 다만 더 이상 업데이트되지 않는다. `aitc.dev` 도메인과 그 위에서 돌던 사이트는 종료되므로, 문서는 [`docs`](https://github.com/apps-in-toss-community/docs) repo의 소스 파일에서 본다. 실기기 attach에 쓰는 launcher PWA도 같은 도메인(`devtools.aitc.dev/launcher/`)에 있어 함께 사라진다 — `start_attach`가 만드는 attach 딥링크가 이 호스트를 가리키므로, 도메인이 내려간 뒤에는 이 경로가 동작하지 않는다. 대체 호스트가 없어 상수 값은 그대로 두었다.
+
 ## 설치
 
 ```sh

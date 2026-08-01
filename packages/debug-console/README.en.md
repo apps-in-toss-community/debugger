@@ -7,6 +7,8 @@
 
 On-device attach + eruda console for Apps in Toss mini-apps. **The only package in this split that can enter a production bundle** — it has exactly one dependency, [`eruda`](https://github.com/liriliri/eruda), and zero peerDependencies, so it is completely agnostic to the SDK version (2.x/3.x) it ships alongside.
 
+This project is no longer maintained. The repo is being archived and becomes read-only, but the source and issue history stay on GitHub, and this package remains installable from npm — it just won't receive updates. The `aitc.dev` domain and the sites hosted on it are being retired, so read the documentation from the source files in the [`docs`](https://github.com/apps-in-toss-community/docs) repo.
+
 ## Install
 
 ```sh

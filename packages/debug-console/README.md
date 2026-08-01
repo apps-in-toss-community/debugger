@@ -7,6 +7,8 @@
 
 앱인토스(Apps in Toss) 미니앱의 on-device attach + eruda 콘솔. **이번 분리에서 프로덕션 번들에 들어갈 수 있는 유일한 패키지**다 — dependency는 [`eruda`](https://github.com/liriliri/eruda) 하나뿐이고 peerDependency는 0개라, SDK 버전(2.x/3.x)과 완전히 무관하게 동작한다.
 
+이 프로젝트는 더 이상 유지보수되지 않는다. repo는 archive되어 read-only가 되지만 소스와 이슈 기록은 GitHub에 그대로 남고, 이 패키지도 npm에서 계속 설치할 수 있다 — 다만 더 이상 업데이트되지 않는다. `aitc.dev` 도메인과 그 위에서 돌던 사이트는 종료되므로, 문서는 [`docs`](https://github.com/apps-in-toss-community/docs) repo의 소스 파일에서 본다.
+
 ## 설치
 
 ```sh

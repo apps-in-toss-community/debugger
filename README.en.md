@@ -8,6 +8,8 @@
 
 Remote-debugging infrastructure for Apps in Toss mini-apps — a pnpm workspace holding the MCP debugging daemon, on-device CDP relay, test runner, and on-device console.
 
+This project is no longer maintained. The repo is being archived and becomes read-only, but the source and issue history stay on GitHub, and the published `@ait-co/debugger` · `@ait-co/debug-console` packages remain installable from npm — they just won't receive updates. The `aitc.dev` domain and the sites hosted on it are being retired, so read the documentation from the source files in the [`docs`](https://github.com/apps-in-toss-community/docs) repo. The launcher PWA used for real-device attach lives on that same domain (`devtools.aitc.dev/launcher/`) and goes away with it — the attach deep-link `@ait-co/debugger` builds points at that host, so this path stops working once the domain is gone. There is no replacement host, so the constant is left as-is.
+
 `@ait-co/devtools` grew to hold 8 feature surfaces (mock · panel · unplugin · phone preview · on-device debug · remote CDP · MCP server · test runner · in-app console) in a single package. It has been split into **3 packages across 2 repos**, and this repo carries the debug/observability half. The explicit motivation for the split is a **security scope**: "what can end up in a production bundle?" should be answerable by reading one `package.json` with exactly one dependency (`eruda`).
 
 | Package | Repo | Contents | Consumed as |

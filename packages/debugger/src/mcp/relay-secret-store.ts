@@ -560,6 +560,6 @@ async function mintAndPersist(
       `다음 실행부터 자동으로 사용됩니다. 직접 export할 필요 없습니다.\n` +
       `팀이 같은 relay를 공유하려면 이 파일을 repo에 커밋하세요(비공개 repo 권장).\n` +
       (giLine ? giLine : '') +
-      `자세히: https://docs.aitc.dev/guides/relay-auth-totp\n`,
+      `자세히: https://github.com/apps-in-toss-community/docs/blob/main/docs/guides/relay-auth-totp.mdx\n`,
   );
 }

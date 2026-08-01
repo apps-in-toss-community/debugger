@@ -4,6 +4,10 @@
  * Declared here (not imported from `src/unplugin/tunnel.ts`) to respect the
  * mcp → unplugin layering boundary. unplugin/tunnel.ts declares its own copy
  * for the same reason — keep the two in sync when the URL changes.
+ *
+ * EOL: the `aitc.dev` domain is being retired, so this host will stop
+ * resolving. The value is kept verbatim because changing it cannot help
+ * already-installed launcher PWAs, and there is no replacement host.
  */
 const LAUNCHER_URL = 'https://devtools.aitc.dev/launcher/';
 

@@ -389,7 +389,9 @@ describe('startDevServerCdpRelay — SECRET-HANDLING', () => {
     // is excluded; everything else must be a loopback address, which is the only
     // relay-bearing URL this surface may emit.
     const urls = all.match(/\b(?:https?|wss?):\/\/[^\s"'<>)]+/g) ?? [];
-    for (const url of urls.filter((u) => !u.startsWith('https://docs.aitc.dev/'))) {
+    for (const url of urls.filter(
+      (u) => !u.startsWith('https://github.com/apps-in-toss-community/docs/'),
+    )) {
       expect(url.startsWith('http://127.0.0.1:')).toBe(true);
     }
   });

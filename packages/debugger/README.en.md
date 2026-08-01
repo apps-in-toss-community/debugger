@@ -7,6 +7,8 @@
 
 Remote-debugging infrastructure for Apps in Toss mini-apps — the MCP debugging daemon, on-device CDP relay, test runner, and dev bridge in a single package. **devDependency / `npx` only — this package's code never enters a production bundle.** The absence of a root (`.`) export makes that boundary explicit: there is no surface here an app could accidentally import.
 
+This project is no longer maintained. The repo is being archived and becomes read-only, but the source and issue history stay on GitHub, and this package remains installable from npm — it just won't receive updates. The `aitc.dev` domain and the sites hosted on it are being retired, so read the documentation from the source files in the [`docs`](https://github.com/apps-in-toss-community/docs) repo. The launcher PWA used for real-device attach lives on that same domain (`devtools.aitc.dev/launcher/`) and goes away with it — the attach deep-link `start_attach` builds points at that host, so this path stops working once the domain is gone. There is no replacement host, so the constant is left as-is.
+
 ## Install
 
 ```sh
