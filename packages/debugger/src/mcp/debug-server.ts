@@ -1485,13 +1485,29 @@ const indicatorInjectedTargetId = new WeakMap<CdpConnection, string>();
  * with "Call enableDomains() first" while that socket is closed. The same
  * ordering is load-bearing on the test-runner path (`relay-factory.ts`).
  *
- * Never throws: a failed injection releases the memo so the next attach edge
- * retries, and the badge is informational UI — nothing downstream depends on it.
+ * Never throws — but the `catch` below is NARROWER than "a failed injection",
+ * and the memo release covers only what actually reaches it.
+ * {@link injectDebugIndicator} (`test-runner/cell.ts`) wraps its own
+ * `Runtime.evaluate` in try/catch, logs a `console.debug`, and resolves
+ * normally, so an evaluate failure never propagates here. In practice the only
+ * rejection that reaches the `catch` is `enableDomains()` — the page-level
+ * socket could not be opened at all — and that is the case the memo release
+ * retries on the next attach edge.
+ *
+ * KNOWN GAP (left as-is: fixing it means touching `cell.ts`, which is out of
+ * scope for #11 and carries regression risk for the test-runner paths that
+ * depend on its swallow-and-resolve contract). If `enableDomains()` resolves
+ * but the evaluate then fails — the socket dropped or timed out between the two
+ * awaits — `cell.ts` swallows it, this function returns `true`, and the memo
+ * keeps the target id CLAIMED. The badge then stays missing for that page until
+ * the target is REPLACED (rescan / reload / fresh deep-link), because only a
+ * new target id gets past the memo check.
  *
  * SECRET-HANDLING: the badge expression carries DOM label text only. No relay
  * wss URL, tunnel host, or TOTP code is read, injected, or logged here.
  *
- * @returns `true` when an injection was issued on this call.
+ * @returns `true` when an injection round-trip was ISSUED on this call — not a
+ *   confirmation that the badge rendered (see KNOWN GAP above).
  */
 export async function ensureDebugIndicator(conn: CdpConnection): Promise<boolean> {
   const targetId = conn.listTargets()[0]?.id;
@@ -1506,8 +1522,9 @@ export async function ensureDebugIndicator(conn: CdpConnection): Promise<boolean
     await injectDebugIndicator(conn);
     return true;
   } catch {
-    // Release the claim so the next attach edge retries (e.g. the page-level
-    // websocket was not open yet). Errors are swallowed by design.
+    // Reached (in practice) only when enableDomains() rejects — cell.ts already
+    // swallows evaluate failures. Release the claim so the next attach edge
+    // retries. Errors are swallowed by design.
     indicatorInjectedTargetId.delete(conn);
     return false;
   }
@@ -2245,9 +2262,33 @@ export class DualConnectionRouter implements ConnectionRouter {
           // attached fine but never got the badge. This watcher is the
           // attach-detection loop that does NOT depend on any tool call's wait
           // window, so injecting here closes the gap for every attach edge
-          // (first attach, replacement, re-attach after detach) — including the
-          // ones that land inside the wait window, where the helper's
-          // per-target memo makes the second injection a no-op.
+          // (first attach, replacement, re-attach after detach).
+          //
+          // DOUBLE INJECTION when the attach lands INSIDE a `start_attach` wait
+          // window: that path calls `injectDebugIndicator(attachConn)` directly
+          // (see the start_attach branch above), NOT `ensureDebugIndicator`, so
+          // it never consults — nor populates — the per-target memo. Both
+          // injections really do run. That is harmless because the injected
+          // EXPRESSION is idempotent (`buildIndicatorExpression` keys its
+          // controller on `window.__ait_indicator`, so a repeat run updates the
+          // single `#__ait_debug_indicator` node in place instead of stacking a
+          // second one). The memo only saves round-trips on the watcher's own
+          // 1 Hz ticks; it is not what makes the in-window pair safe.
+          //
+          // SCOPE (wider than `start_attach`, deliberately): this watcher is
+          // armed by `start_debug` for the active family, so the badge is now
+          // injected on EVERY relay attach edge — including sessions where
+          // `start_attach` was never called (e.g. a phone re-opening an earlier
+          // attach deep-link) and including `run_tests`' auto-attach path, which
+          // `cell.ts`'s `injectDebugIndicator` doc asks callers to keep the badge
+          // off (it can appear in `take_screenshot` / `measure_safe_area` /
+          // DOM-snapshot output taken during an automated run). Narrowing the
+          // trigger is a separate decision, not part of the #11 fix.
+          // `ensureDebugIndicator` also calls `enableDomains()`, which OPENS the
+          // page-level CDP websocket (and enables Runtime/Network/DOM/Page/
+          // Inspector) at the attach edge — earlier than before, when the daemon
+          // opened that socket lazily on the first tool call that needed CDP.
+          //
           // Fire-and-forget: `ensureDebugIndicator` never rejects, and the badge
           // is informational UI that must not gate the rest of this callback.
           void ensureDebugIndicator(activeFamily.connection);

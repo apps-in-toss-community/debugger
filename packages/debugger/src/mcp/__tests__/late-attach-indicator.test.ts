@@ -205,7 +205,14 @@ describe('ensureDebugIndicator', () => {
     expect(conn.badgeInjections()).toBe(2);
   });
 
-  it('releases the memo when injection fails so a later attach edge retries', async () => {
+  // The memo release covers `enableDomains()` rejections ONLY, which is the
+  // whole of what the helper's catch can see: `injectDebugIndicator` in
+  // `test-runner/cell.ts` swallows its own `Runtime.evaluate` failure and
+  // resolves normally, so an evaluate failure leaves the memo claimed and the
+  // badge missing until the target is replaced. That gap is documented on
+  // `ensureDebugIndicator` and is deliberately not covered here — asserting it
+  // would only pin behaviour that lives in `cell.ts`.
+  it('releases the memo when enableDomains() rejects so a later attach edge retries', async () => {
     const conn = new FakeRelayConn();
     conn.enableDomainsFails = true;
     conn.setTargets([page('t1')]);
@@ -213,7 +220,7 @@ describe('ensureDebugIndicator', () => {
     expect(await ensureDebugIndicator(conn)).toBe(false);
     expect(conn.badgeInjections()).toBe(0);
 
-    // Same page, socket now available — the earlier failure must not have
+    // Same page, socket now available — the earlier rejection must not have
     // permanently claimed this target id.
     conn.enableDomainsFails = false;
     expect(await ensureDebugIndicator(conn)).toBe(true);
