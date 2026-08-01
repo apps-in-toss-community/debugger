@@ -1473,8 +1473,7 @@ const indicatorInjectedTargetId = new WeakMap<CdpConnection, string>();
  * attach-detection loop that runs independently of any tool call's wait window.
  *
  * Idempotence is enforced on two levels:
- *   - here, per (connection, target id), so the 1 Hz watcher never re-issues a
- *     CDP round-trip for a page that already carries the badge; and
+ *   - here, per (connection, target id); and
  *   - in the injected expression itself, whose controller is keyed on
  *     `window.__ait_indicator` presence, so even a redundant injection updates
  *     the single `#__ait_debug_indicator` node in place rather than stacking a
@@ -1499,9 +1498,7 @@ const indicatorInjectedTargetId = new WeakMap<CdpConnection, string>();
  * depend on its swallow-and-resolve contract). If `enableDomains()` resolves
  * but the evaluate then fails — the socket dropped or timed out between the two
  * awaits — `cell.ts` swallows it, this function returns `true`, and the memo
- * keeps the target id CLAIMED. The badge then stays missing for that page until
- * the target is REPLACED (rescan / reload / fresh deep-link), because only a
- * new target id gets past the memo check.
+ * keeps the target id CLAIMED. The badge can then be missing for that page.
  *
  * SECRET-HANDLING: the badge expression carries DOM label text only. No relay
  * wss URL, tunnel host, or TOTP code is read, injected, or logged here.
@@ -2272,8 +2269,7 @@ export class DualConnectionRouter implements ConnectionRouter {
           // EXPRESSION is idempotent (`buildIndicatorExpression` keys its
           // controller on `window.__ait_indicator`, so a repeat run updates the
           // single `#__ait_debug_indicator` node in place instead of stacking a
-          // second one). The memo only saves round-trips on the watcher's own
-          // 1 Hz ticks; it is not what makes the in-window pair safe.
+          // second one).
           //
           // SCOPE (wider than `start_attach`, deliberately): this watcher is
           // armed by `start_debug` for the active family, so the badge is now
