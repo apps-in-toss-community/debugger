@@ -1451,6 +1451,68 @@ export function startAttachWatcher(
   };
 }
 
+/**
+ * Per-connection memo of the target id the "Debugger Connected" badge has
+ * already been injected into. Keyed on the connection object (weak, so a torn
+ * down family is collected with its entry) and valued by target id, so a target
+ * REPLACEMENT — a rescan, a reload, a fresh deep-link — re-injects into the new
+ * page while repeat observations of the same page do not.
+ */
+const indicatorInjectedTargetId = new WeakMap<CdpConnection, string>();
+
+/**
+ * Injects the on-phone "Debugger Connected" badge if the currently-attached
+ * page has not received it yet (issue #11).
+ *
+ * `start_attach` injects the badge from inside its own wait window and only on
+ * the `!isError` branch. An attach that lands AFTER that window closes (the
+ * phone was scanned past `wait_timeout_seconds`) is a perfectly good attach —
+ * `list_pages` sees it — but it used to miss the injection entirely, which is
+ * exactly the gap #11 reports. The fix is this helper wired into the attach
+ * WATCHER (see {@link DualConnectionRouter}'s `armWatcher`), i.e. into the
+ * attach-detection loop that runs independently of any tool call's wait window.
+ *
+ * Idempotence is enforced on two levels:
+ *   - here, per (connection, target id), so the 1 Hz watcher never re-issues a
+ *     CDP round-trip for a page that already carries the badge; and
+ *   - in the injected expression itself, whose controller is keyed on
+ *     `window.__ait_indicator` presence, so even a redundant injection updates
+ *     the single `#__ait_debug_indicator` node in place rather than stacking a
+ *     second one (see `buildIndicatorExpression`).
+ *
+ * `enableDomains()` runs first because injection is a `Runtime.evaluate` over
+ * the page-level CDP websocket, and `ChiiCdpConnection.sendCommand` rejects
+ * with "Call enableDomains() first" while that socket is closed. The same
+ * ordering is load-bearing on the test-runner path (`relay-factory.ts`).
+ *
+ * Never throws: a failed injection releases the memo so the next attach edge
+ * retries, and the badge is informational UI — nothing downstream depends on it.
+ *
+ * SECRET-HANDLING: the badge expression carries DOM label text only. No relay
+ * wss URL, tunnel host, or TOTP code is read, injected, or logged here.
+ *
+ * @returns `true` when an injection was issued on this call.
+ */
+export async function ensureDebugIndicator(conn: CdpConnection): Promise<boolean> {
+  const targetId = conn.listTargets()[0]?.id;
+  // Nothing attached — nothing to paint the badge onto.
+  if (targetId === undefined) return false;
+  if (indicatorInjectedTargetId.get(conn) === targetId) return false;
+  // Claim BEFORE the first await so two overlapping callers cannot both pass
+  // the check and issue a duplicate round-trip.
+  indicatorInjectedTargetId.set(conn, targetId);
+  try {
+    await conn.enableDomains();
+    await injectDebugIndicator(conn);
+    return true;
+  } catch {
+    // Release the claim so the next attach edge retries (e.g. the page-level
+    // websocket was not open yet). Errors are swallowed by design.
+    indicatorInjectedTargetId.delete(conn);
+    return false;
+  }
+}
+
 export interface RunDebugServerOptions {
   /**
    * Local Chii relay port. Default 0 (OS-assigned ephemeral port).
@@ -2177,6 +2239,18 @@ export class DualConnectionRouter implements ConnectionRouter {
         // AutoDevtoolsOpener._opened is a once-per-session guard, so repeat
         // fires (target replacement) do not open an extra browser window.
         if (activeFamily.connection.kind === 'relay') {
+          // LATE-ATTACH BADGE (#11). `start_attach` injects the on-phone
+          // "Debugger Connected" badge only on the `!isError` branch of its own
+          // wait window, so a phone scanned after `wait_timeout_seconds` elapsed
+          // attached fine but never got the badge. This watcher is the
+          // attach-detection loop that does NOT depend on any tool call's wait
+          // window, so injecting here closes the gap for every attach edge
+          // (first attach, replacement, re-attach after detach) — including the
+          // ones that land inside the wait window, where the helper's
+          // per-target memo makes the second injection a no-op.
+          // Fire-and-forget: `ensureDebugIndicator` never rejects, and the badge
+          // is informational UI that must not gate the rest of this callback.
+          void ensureDebugIndicator(activeFamily.connection);
           // Take the first attached target's id — we are in the onAttach
           // callback, so listTargets() is guaranteed to be non-empty.
           const firstTarget = activeFamily.connection.listTargets()[0];
