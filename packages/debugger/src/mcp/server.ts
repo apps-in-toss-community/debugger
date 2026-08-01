@@ -206,7 +206,7 @@ const DEV_TOOL_DEFINITIONS = [
       'NOT available in dev-mode — requires a live cloudflared relay (Tier B, relay-only). ' +
       'To use this tool: restart the MCP server with `--mode=debug` (or omit --mode) and set ' +
       'MCP_ENV=relay, then call start_attach to generate the QR for phone scanning. ' +
-      'See: https://docs.aitc.dev/guides/debug-relay',
+      'See: https://github.com/apps-in-toss-community/docs/blob/main/docs/guides/debug-relay.mdx',
     inputSchema: {
       type: 'object',
       properties: {

@@ -8,6 +8,8 @@
 
 앱인토스(Apps in Toss) 미니앱의 원격 디버깅 인프라 — MCP 디버깅 데몬, on-device CDP relay, test-runner, on-device 콘솔을 담는 pnpm workspace.
 
+이 프로젝트는 더 이상 유지보수되지 않는다. repo는 archive되어 read-only가 되지만 소스와 이슈 기록은 GitHub에 그대로 남고, npm에 게시된 `@ait-co/debugger` · `@ait-co/debug-console`도 계속 설치할 수 있다 — 다만 더 이상 업데이트되지 않는다. `aitc.dev` 도메인과 그 위에서 돌던 사이트는 종료되므로, 문서는 [`docs`](https://github.com/apps-in-toss-community/docs) repo의 소스 파일에서 본다. 실기기 attach에 쓰는 launcher PWA도 같은 도메인(`devtools.aitc.dev/launcher/`)에 있어 함께 사라진다 — `@ait-co/debugger`가 만드는 attach 딥링크가 이 호스트를 가리키므로, 도메인이 내려간 뒤에는 이 경로가 동작하지 않는다. 대체 호스트가 없어 상수 값은 그대로 두었다.
+
 `@ait-co/devtools`가 8개 기능 표면(mock·panel·unplugin·phone preview·on-device debug·remote CDP·MCP server·test runner·in-app console)을 한 패키지에 담고 있었는데, 이를 **3 패키지 / 2 repo**로 쪼갰고 이 repo가 debug·관측 쪽 절반을 담당한다. 분리의 명시적 동기는 **보안 스코프**다 — "무엇이 프로덕션 번들에 들어갈 수 있는가"가 `package.json` 한 장(dep 1개: `eruda`)으로 답해지도록 만든다.
 
 | 패키지 | repo | 내용 | 소비 형태 |

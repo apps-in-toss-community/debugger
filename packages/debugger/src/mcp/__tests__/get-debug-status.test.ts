@@ -704,7 +704,11 @@ describe('get_debug_status MCP tool', () => {
 
   it('pages field is populated from list_pages when a target is attached', async () => {
     const connection = new FakeCdpConnection([
-      { id: 'tgt1', title: 'SDK Example', url: 'https://sdk-example.aitc.dev' },
+      {
+        id: 'tgt1',
+        title: 'SDK Example',
+        url: 'https://github.com/apps-in-toss-community/sdk-example',
+      },
     ]);
     const client = await makeClient({ connection, env: 'relay-dev' });
     const result = await client.callTool({ name: 'get_debug_status', arguments: {} });
@@ -717,7 +721,11 @@ describe('get_debug_status MCP tool', () => {
 
   it('nextRecommendedAction is null when a page is attached and healthy', async () => {
     const connection = new FakeCdpConnection([
-      { id: 'tgt1', title: 'SDK Example', url: 'https://sdk-example.aitc.dev' },
+      {
+        id: 'tgt1',
+        title: 'SDK Example',
+        url: 'https://github.com/apps-in-toss-community/sdk-example',
+      },
     ]);
     const tunnelUp: TunnelStatus = { up: true, wssUrl: 'wss://abc.trycloudflare.com' };
     const client = await makeClient({ connection, env: 'relay-dev', tunnelStatus: tunnelUp });
