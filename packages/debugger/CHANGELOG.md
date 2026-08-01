@@ -1,5 +1,17 @@
 # @ait-co/debugger
 
+## 0.1.4
+
+### Patch Changes
+
+- b85fa31: EOL 준비 — 죽을 `aitc.dev` 링크를 GitHub 소스로 옮기고 README에 종료 안내 추가.
+
+  `docs.aitc.dev` 도메인이 종료되므로 런타임 출력에 박혀 있던 문서 링크 3곳(`start_attach` 툴 설명, relay TOTP 시크릿 누락 안내, relay 시크릿 최초 생성 안내)을 `docs` repo의 GitHub 소스 URL로 교체했다. 대체 호스트가 없는 launcher PWA URL(`devtools.aitc.dev/launcher/`)은 동작을 바꾸지 않기 위해 값을 그대로 두고, 상수 옆 주석과 README에 그 호스트가 함께 사라진다는 사실만 남겼다.
+
+- 3565df7: 대기창 밖에서 attach가 성립해도 온디바이스 "Debugger Connected" 배지가 주입되도록 수정 (#11).
+
+  `start_attach`는 자기 대기창이 `!isError`로 끝날 때만 배지를 주입해서, `wait_timeout_seconds`가 지난 뒤 폰을 스캔하면 attach 자체는 성공(`list_pages`에 잡힘)하는데 배지는 세션 내내 뜨지 않았다. 대기창과 무관하게 도는 attach 워처(`DualConnectionRouter`)에 주입을 배선했다. 주입은 (연결, target id) 단위로 멱등하다.
+
 ## 0.1.3
 
 ### Patch Changes
